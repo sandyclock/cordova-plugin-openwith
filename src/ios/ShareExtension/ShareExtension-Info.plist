@@ -28,6 +28,8 @@
                 <dict>
                     <key>NSExtensionActivationSupportsWebURLWithMaxCount</key>
                     <integer>1</integer>
+                    <key>NSExtensionActivationSupportsImageWithMaxCount</key>
+                    <integer>10</integer>
                 </dict>
                 <key>NSExtensionActivationUsesStrictMatching</key>
                 <integer>1</integer>

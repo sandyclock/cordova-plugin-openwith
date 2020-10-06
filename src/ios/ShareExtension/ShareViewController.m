@@ -258,7 +258,7 @@
 }
 
 - (void) sendResults: (NSDictionary*)results {
-    [self.userDefaults setObject:results forKey:@"shared"];
+    [self.userDefaults setValue:results forKey:@"shared"];
     [self.userDefaults synchronize];
 
     // Emit a URL that opens the cordova app

@@ -27,7 +27,7 @@ SOFTWARE.
   xmlns="http://apache.org/cordova/ns/plugins/1.0"
   xmlns:android="http://schemas.android.com/apk/res/android"
   id="cordova-plugin-shared"
-  version="1.0.8"
+  version="1.0.9"
 >
   <name>Shared</name>
   <description>Cordova "Shared" plugin for Cordova</description>
