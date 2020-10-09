@@ -171,24 +171,41 @@
         [self debug:[NSString stringWithFormat:@"item provider registered indentifiers = %@", itemProvider.registeredTypeIdentifiers]];
         // URL case
         if ([itemProvider hasItemConformingToTypeIdentifier:@"public.url"]) {
+            __block NSString *content = nil;
+            [itemProvider loadItemForTypeIdentifier:@"public.url" options:nil completionHandler: ^(NSData* data, NSError *error) {
+                content = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+
+            }];
             [itemProvider loadItemForTypeIdentifier:@"public.url" options:nil completionHandler: ^(NSURL* item, NSError *error) {
                 --remainingAttachments;
                 NSString *url = [item absoluteURL].absoluteString;
                 NSLog(@"[ShareViewController.m]%@", url);
-//                [results setValue:url forKey:@"url"];
-                
+
                 [self debug:[NSString stringWithFormat:@"public.url = %@", item]];
-               // NSData *data = [NSData dataWithContentsOfURL:(NSURL*)item];
-               // NSString *base64 = [data convertToBase64];
                 NSString *uti = @"public.url";
-                NSDictionary *dict = @{
+                NSDictionary *dict = nil;
+                if (content){
+                    dict = @{
                                         //    @"data" : base64,
                                            @"uti": uti,
                                            @"utis": itemProvider.registeredTypeIdentifiers,
                                            @"name": @"",
+                                           @"content": content,
                                            @"url": url,
                                            @"type": [self mimeTypeFromUti:uti],
                                       };
+                }
+                else {
+                    dict = @{
+                                            //    @"data" : base64,
+                                               @"uti": uti,
+                                               @"utis": itemProvider.registeredTypeIdentifiers,
+                                               @"name": @"",
+                                               @"url": url,
+                                               @"type": [self mimeTypeFromUti:uti],
+                                          };
+
+                }
                 [items addObject:dict];
                 if (remainingAttachments == 0) {
                     [self sendResults:results];
