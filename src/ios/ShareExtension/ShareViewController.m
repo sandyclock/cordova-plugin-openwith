@@ -236,9 +236,13 @@
         else if ([itemProvider hasItemConformingToTypeIdentifier:@"public.image"]) {
             [self debug:[NSString stringWithFormat:@"item provider = %@", itemProvider]];
 
+            __block NSData *data = nil;
+            [itemProvider loadItemForTypeIdentifier:@"public.image" options:nil completionHandler: ^(NSData* item, NSError *error) {
+                data = item;
+            }];
             [itemProvider loadItemForTypeIdentifier:@"public.image" options:nil completionHandler: ^(NSURL* item, NSError *error) {
                 --remainingAttachments;
-                NSData *data = [NSData dataWithContentsOfURL:(NSURL*)item];
+//                NSData *data = [NSData dataWithContentsOfURL:(NSURL*)item];
                 NSString *base64 = [data convertToBase64];
                 NSString *suggestedName = item.lastPathComponent;
 
