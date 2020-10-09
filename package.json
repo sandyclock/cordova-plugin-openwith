@@ -1,6 +1,6 @@
 {
   "name": "cordova-plugin-shared",
-  "version": "1.0.9",
+  "version": "1.0.10",
   "description": "Cordova \"Shared\" plugin for iOS and Android",
   "cordova": {
     "id": "cordova-plugin-shared",
