@@ -235,15 +235,46 @@
                 }
 
                 NSString *mimeType =  [self mimeTypeFromUti:registeredType];
+                
+                UIImage *image = [UIImage imageWithData: data];
+                
+                CIDetector *detector = [CIDetector detectorOfType:CIDetectorTypeQRCode context:nil options:@{ CIDetectorAccuracy : CIDetectorAccuracyHigh }];
 
-                NSDictionary *dict = @{
+                NSArray *features = [detector featuresInImage:[CIImage imageWithCGImage: image.CGImage]];
+
+                NSString *qrString = nil;
+                
+                if (features.count>0){
+                    CIQRCodeFeature *feature = [features objectAtIndex:0];
+                    qrString = feature.messageString;
+                }
+                
+                NSDictionary *dict = nil;
+                
+                if (qrString){
+                dict = @{
                                            @"text" : self.contentText,
                                            @"data" : base64,
                                            @"uti"  : uti,
                                            @"utis" : itemProvider.registeredTypeIdentifiers,
                                            @"name" : suggestedName,
-                                           @"type" : mimeType
+                                           @"type" : mimeType,
+                                           @"processed": @YES,
+                                           @"qrString": qrString,
                                       };
+                }
+                else {
+                    dict = @{
+                                           @"text" : self.contentText,
+                                           @"data" : base64,
+                                           @"uti"  : uti,
+                                           @"utis" : itemProvider.registeredTypeIdentifiers,
+                                           @"name" : suggestedName,
+                                           @"type" : mimeType,
+                                           @"processed": @YES
+                                      };
+                }
+
 
                 [items addObject:dict];
                 if (remainingAttachments == 0) {
