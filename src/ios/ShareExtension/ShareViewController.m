@@ -176,6 +176,13 @@
             // Arguments
             void (^completion)(BOOL success) = ^void(BOOL success) {
                 NSLog(@"Completions block: %i", success);
+//                [self.extensionContext completeRequestReturningItems:@[] completionHandler:^void(BOOL success){
+////                    usleep(1000000);
+//                    usleep(10000);
+//
+//                }];
+
+                
             };
             if (@available(iOS 13.0, *)) {
                 UISceneOpenExternalURLOptions * options = [[UISceneOpenExternalURLOptions alloc] init];
@@ -208,7 +215,14 @@
     [self.view endEditing:YES];
 }
 
+//- (void) didSelectPost {
+//    [self debug:@"[didSelectPost]"];
+//}
+
 - (void) viewDidLoad {
+
+//- (void) didSelectPost {
+
     [self setup];
     [self debug:@"[viewDidLoad]"];
 
@@ -409,6 +423,7 @@
             [self.extensionContext completeRequestReturningItems:@[] completionHandler:nil];
         }
     }
+    
 }
 
 - (void) sendResults: (NSDictionary*)results {
@@ -418,18 +433,21 @@
     // Emit a URL that opens the cordova app
     NSString *url = [NSString stringWithFormat:@"%@://shared", SHAREEXT_URL_SCHEME];
 
+//    [self.extensionContext completeRequestReturningItems:@[] completionHandler:^(BOOL result){
+//        [self openURL:[NSURL URLWithString:url]];
+//    }];
+
     [self openURL:[NSURL URLWithString:url]];
 
+    
     //need to sleep to avoid thread lock. -tanli
     usleep(1000000);
-
+    
     // Shut down the extension
     [self.extensionContext completeRequestReturningItems:@[] completionHandler:nil];
+
 }
 
- - (void) didSelectPost {
-     [self debug:@"[didSelectPost]"];
- }
 
 - (NSArray*) configurationItems {
     // To add configuration options via table cells at the bottom of the sheet, return an array of SLComposeSheetConfigurationItem here.
