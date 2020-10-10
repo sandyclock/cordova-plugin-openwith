@@ -77,13 +77,13 @@
 @end
 
 @interface ShareViewController : SLComposeServiceViewController <UIAlertViewDelegate> {
-    int _verbosityLevel;
+    long _verbosityLevel;
     NSUserDefaults *_userDefaults;
     NSString *_backURL;
 
     //- (void)sendResults
 }
-@property (nonatomic) int verbosityLevel;
+@property (nonatomic) long verbosityLevel;
 @property (nonatomic,retain) NSUserDefaults *userDefaults;
 @property (nonatomic,retain) NSString *backURL;
 @end
@@ -123,6 +123,15 @@
     return YES;
 }
 
++ (NSURL*)getSharedContainerURLPath
+{
+    NSFileManager *fm = [NSFileManager defaultManager];
+
+    NSURL *groupContainerURL = [fm containerURLForSecurityApplicationGroupIdentifier:SHAREEXT_GROUP_IDENTIFIER];
+
+    return groupContainerURL;
+}
+
 - (void) openURL:(nonnull NSURL *)url {
 
     SEL selector = NSSelectorFromString(@"openURL:options:completionHandler:");
@@ -159,7 +168,7 @@
     [self setup];
     [self debug:@"[viewDidLoad]"];
 
-    __block int remainingAttachments = ((NSExtensionItem*)self.extensionContext.inputItems[0]).attachments.count;
+    __block unsigned long remainingAttachments = (unsigned long)((NSExtensionItem*)self.extensionContext.inputItems[0]).attachments.count;
     __block NSMutableArray *items = [[NSMutableArray alloc] init];
     __block NSDictionary *results = @{
                                           @"text" : self.contentText,
@@ -178,6 +187,10 @@
             }];
             [itemProvider loadItemForTypeIdentifier:@"public.url" options:nil completionHandler: ^(NSURL* item, NSError *error) {
                 --remainingAttachments;
+                
+//                NSData *data = [NSData dataWithContentsOfURL:(NSURL*)item];
+//                NSString *content = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+
                 NSString *url = [item absoluteURL].absoluteString;
                 NSLog(@"[ShareViewController.m]%@", url);
 
@@ -236,15 +249,27 @@
         else if ([itemProvider hasItemConformingToTypeIdentifier:@"public.image"]) {
             [self debug:[NSString stringWithFormat:@"item provider = %@", itemProvider]];
 
-            __block NSData *data = nil;
-            [itemProvider loadItemForTypeIdentifier:@"public.image" options:nil completionHandler: ^(NSData* item, NSError *error) {
-                data = item;
-            }];
-            [itemProvider loadItemForTypeIdentifier:@"public.image" options:nil completionHandler: ^(NSURL* item, NSError *error) {
+//            __block NSData *data = nil;
+//            [itemProvider loadItemForTypeIdentifier:@"public.image" options:nil completionHandler: ^(NSData* item, NSError *error) {
+//                data = item;
+//            }];
+            
+            [itemProvider loadItemForTypeIdentifier:@"public.image" options:nil completionHandler: ^(NSURL *item, NSError *error) {
                 --remainingAttachments;
-//                NSData *data = [NSData dataWithContentsOfURL:(NSURL*)item];
+                
+//                NSData *data = [[NSData alloc] init];
+//                                if([(NSObject*)item isKindOfClass:[NSURL class]]) {
+//                                    data = [NSData dataWithContentsOfURL:(NSURL*)item];
+//                                }
+//                                if([(NSObject*)item isKindOfClass:[UIImage class]]) {
+//                                    data = UIImagePNGRepresentation((UIImage*)item);
+//                                }
+                
+                NSData *data = [NSData dataWithContentsOfURL:(NSURL*)item];
+            
                 NSString *base64 = [data convertToBase64];
                 NSString *suggestedName = item.lastPathComponent;
+                
 
                 NSString *uti = @"public.image";
 
@@ -257,14 +282,41 @@
 
                 NSString *mimeType =  [self mimeTypeFromUti:registeredType];
                 
+
+                NSString *qrString = nil;
+
+                    
                 UIImage *image = [UIImage imageWithData: data];
+                
+                NSFileManager *fileManager  = [NSFileManager defaultManager];
+
+                NSURL *groupContainerURL = [fileManager containerURLForSecurityApplicationGroupIdentifier:SHAREEXT_GROUP_IDENTIFIER];
+
+                NSString *documentsDirectoryPath = groupContainerURL.path;//[NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) objectAtIndex:0];
+                
+                NSURL *writableUrl = [groupContainerURL URLByAppendingPathComponent:suggestedName];
+                
+                NSString *writablePath = [documentsDirectoryPath stringByAppendingPathComponent:suggestedName];
+                
+                
+            
+                if (![fileManager fileExistsAtPath:writablePath]){
+                    [fileManager removeItemAtPath:writablePath error: NULL];
+                }
+
+                [data writeToURL:writableUrl atomically:true];
+//                [data writeToFile:writablePath atomically:true];
+                
+//                [self debug:[NSString stringWithFormat:@"item provider = %CGSIZE", [image size]]];
+                NSData *reducedData = UIImageJPEGRepresentation(image, 0.1);
+                base64 = [reducedData convertToBase64];
+                
+                NSString *url = [item absoluteURL].absoluteString;
                 
                 CIDetector *detector = [CIDetector detectorOfType:CIDetectorTypeQRCode context:nil options:@{ CIDetectorAccuracy : CIDetectorAccuracyHigh }];
 
                 NSArray *features = [detector featuresInImage:[CIImage imageWithCGImage: image.CGImage]];
 
-                NSString *qrString = nil;
-                
                 if (features.count>0){
                     CIQRCodeFeature *feature = [features objectAtIndex:0];
                     qrString = feature.messageString;
@@ -272,10 +324,14 @@
                 
                 NSDictionary *dict = nil;
                 
+//                NSString *fileUrl = [@"file://" stringByAppendingString:writablePath];
+                NSString *fileUrl = [writableUrl absoluteURL].absoluteString;
+                
                 if (qrString){
                 dict = @{
                                            @"text" : self.contentText,
-                                           @"data" : base64,
+//                                           @"data" : base64,
+                                           @"url" : fileUrl,//writablePath,//url,
                                            @"uti"  : uti,
                                            @"utis" : itemProvider.registeredTypeIdentifiers,
                                            @"name" : suggestedName,
@@ -287,7 +343,8 @@
                 else {
                     dict = @{
                                            @"text" : self.contentText,
-                                           @"data" : base64,
+//                                           @"data" : base64,
+                                           @"url" : fileUrl, //writablePath,//url,
                                            @"uti"  : uti,
                                            @"utis" : itemProvider.registeredTypeIdentifiers,
                                            @"name" : suggestedName,
@@ -301,7 +358,8 @@
                 if (remainingAttachments == 0) {
                     [self sendResults:results];
                 }
-            }];
+                }
+             ];
         }
         else {
             [self.extensionContext completeRequestReturningItems:@[] completionHandler:nil];
@@ -310,7 +368,7 @@
 }
 
 - (void) sendResults: (NSDictionary*)results {
-    [self.userDefaults setValue:results forKey:@"shared"];
+    [self.userDefaults setValue: results forKey:@"shared"];
     [self.userDefaults synchronize];
 
     // Emit a URL that opens the cordova app
