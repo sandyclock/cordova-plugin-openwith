@@ -294,21 +294,24 @@
 // We will load from NSURL ourselves because it will always give use raw data, instead of UIImage. To save an UIImage, we have to do a format converstion,
 // whereas we want to perserve the original file.
 //            __block NSData *data = [[NSData alloc] init];
-//            [itemProvider loadItemForTypeIdentifier:@"public.image" options:nil completionHandler: ^(id<NSSecureCoding> item, NSError *error) {
-//                                if([(NSObject*)item isKindOfClass:[NSURL class]]) {
-//                                    data = [NSData dataWithContentsOfURL:(NSURL*)item];
-//                                }
-//                                if([(NSObject*)item isKindOfClass:[UIImage class]]) {
+            __block UIImage *image = [[UIImage alloc] init];
+            [itemProvider loadItemForTypeIdentifier:@"public.image" options:nil completionHandler: ^(id<NSSecureCoding> item, NSError *error) {
+                                                if([(NSObject*)item isKindOfClass:[NSURL class]]) {
+                                                    NSData *_data = [NSData dataWithContentsOfURL:(NSURL*)item];
+                                                    image = [UIImage imageWithData:_data];
+                                                }
+                                                if([(NSObject*)item isKindOfClass:[UIImage class]]) {
 //                                    data = UIImagePNGRepresentation((UIImage*)item);
-//                                }
-//
-//            }];
+                                                    image = (UIImage *)item;
+                                                }
+
+            }];
             
             [itemProvider loadItemForTypeIdentifier:@"public.image" options:nil completionHandler: ^(NSURL *item, NSError *error) {
                 --remainingAttachments;
                 
                 
-                NSData *data = [NSData dataWithContentsOfURL:(NSURL*)item];
+//                NSData *data = [NSData dataWithContentsOfURL:(NSURL*)item];
             
 //                NSString *base64 = [data convertToBase64];
                 NSString *suggestedName = item.lastPathComponent;
@@ -329,7 +332,7 @@
                 NSString *qrString = nil;
 
                     
-                UIImage *image = [UIImage imageWithData: data];
+//                UIImage *image =    [UIImage imageWithData: data];
                 
                 NSFileManager *fileManager  = [NSFileManager defaultManager];
 
@@ -349,7 +352,7 @@
 
                 [fileManager copyItemAtURL: item toURL:writableUrl error: NULL];
                 
-                [data writeToURL:writableUrl atomically:true];
+//                [data writeToURL:writableUrl atomically:true];
 //                [data writeToFile:writablePath atomically:true];
                 
 //                [self debug:[NSString stringWithFormat:@"item provider = %CGSIZE", [image size]]];
