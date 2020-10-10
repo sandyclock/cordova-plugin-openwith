@@ -123,14 +123,44 @@
     return YES;
 }
 
-+ (NSURL*)getSharedContainerURLPath
-{
-    NSFileManager *fm = [NSFileManager defaultManager];
+//+ (NSURL*)getSharedContainerURLPath
+//{
+//    NSFileManager *fm = [NSFileManager defaultManager];
+//
+//    NSURL *groupContainerURL = [fm containerURLForSecurityApplicationGroupIdentifier:SHAREEXT_GROUP_IDENTIFIER];
+//
+//    return groupContainerURL;
+//}
 
-    NSURL *groupContainerURL = [fm containerURLForSecurityApplicationGroupIdentifier:SHAREEXT_GROUP_IDENTIFIER];
+//- (void) openURL:(nonnull NSURL *)url {
+//
+//    SEL selector = NSSelectorFromString(@"openURL:options:completionHandler:");
+//
+//    UIResponder* responder = self;
+//    while ((responder = [responder nextResponder]) != nil) {
+//        NSLog(@"responder = %@", responder);
+//        if([responder respondsToSelector:selector] == true) {
+//            NSMethodSignature *methodSignature = [responder methodSignatureForSelector:selector];
+//            NSInvocation *invocation = [NSInvocation invocationWithMethodSignature:methodSignature];
+//
+//            // Arguments
+//            NSDictionary<NSString *, id> *options = [NSDictionary dictionary];
+//            void (^completion)(BOOL success) = ^void(BOOL success) {
+//                NSLog(@"Completions block: %i", success);
+//            };
+//
+//            [invocation setTarget: responder];
+//            [invocation setSelector: selector];
+//            [invocation setArgument: &url atIndex: 2];
+//            // no options and completion function. Remove unused code -tanli
+//            // [invocation setArgument: &options atIndex:3];
+//            // [invocation setArgument: &completion atIndex: 4];
+//            [invocation invoke];
+//            break;
+//        }
+//    }
+//}
 
-    return groupContainerURL;
-}
 
 - (void) openURL:(nonnull NSURL *)url {
 
@@ -144,22 +174,36 @@
             NSInvocation *invocation = [NSInvocation invocationWithMethodSignature:methodSignature];
 
             // Arguments
-            NSDictionary<NSString *, id> *options = [NSDictionary dictionary];
             void (^completion)(BOOL success) = ^void(BOOL success) {
                 NSLog(@"Completions block: %i", success);
             };
-
+            if (@available(iOS 13.0, *)) {
+                UISceneOpenExternalURLOptions * options = [[UISceneOpenExternalURLOptions alloc] init];
+                options.universalLinksOnly = false;
+                
             [invocation setTarget: responder];
             [invocation setSelector: selector];
             [invocation setArgument: &url atIndex: 2];
-            // no options and completion function. Remove unused code -tanli
-            // [invocation setArgument: &options atIndex:3]; 
-            // [invocation setArgument: &completion atIndex: 4];
+                [invocation setArgument: &options atIndex:3];
+                [invocation setArgument: &completion atIndex: 4];
+                [invocation invoke];
+                break;
+            } else {
+                NSDictionary<NSString *, id> *options = [NSDictionary dictionary];
+                
+                [invocation setTarget: responder];
+                [invocation setSelector: selector];
+                [invocation setArgument: &url atIndex: 2];
+                [invocation setArgument: &options atIndex:3];
+                [invocation setArgument: &completion atIndex: 4];
             [invocation invoke];
             break;
         }
     }
+    }
 }
+
+
 - (void) viewDidAppear:(BOOL)animated {
     [self.view endEditing:YES];
 }
@@ -199,7 +243,6 @@
                 NSDictionary *dict = nil;
                 if (content){
                     dict = @{
-                                        //    @"data" : base64,
                                            @"uti": uti,
                                            @"utis": itemProvider.registeredTypeIdentifiers,
                                            @"name": @"",
@@ -210,7 +253,6 @@
                 }
                 else {
                     dict = @{
-                                            //    @"data" : base64,
                                                @"uti": uti,
                                                @"utis": itemProvider.registeredTypeIdentifiers,
                                                @"name": @"",
@@ -249,25 +291,26 @@
         else if ([itemProvider hasItemConformingToTypeIdentifier:@"public.image"]) {
             [self debug:[NSString stringWithFormat:@"item provider = %@", itemProvider]];
 
-//            __block NSData *data = nil;
-//            [itemProvider loadItemForTypeIdentifier:@"public.image" options:nil completionHandler: ^(NSData* item, NSError *error) {
-//                data = item;
-//            }];
-            
-            [itemProvider loadItemForTypeIdentifier:@"public.image" options:nil completionHandler: ^(NSURL *item, NSError *error) {
-                --remainingAttachments;
-                
-//                NSData *data = [[NSData alloc] init];
+// We will load from NSURL ourselves because it will always give use raw data, instead of UIImage. To save an UIImage, we have to do a format converstion,
+// whereas we want to perserve the original file.
+//            __block NSData *data = [[NSData alloc] init];
+//            [itemProvider loadItemForTypeIdentifier:@"public.image" options:nil completionHandler: ^(id<NSSecureCoding> item, NSError *error) {
 //                                if([(NSObject*)item isKindOfClass:[NSURL class]]) {
 //                                    data = [NSData dataWithContentsOfURL:(NSURL*)item];
 //                                }
 //                                if([(NSObject*)item isKindOfClass:[UIImage class]]) {
 //                                    data = UIImagePNGRepresentation((UIImage*)item);
 //                                }
+//
+//            }];
+            
+            [itemProvider loadItemForTypeIdentifier:@"public.image" options:nil completionHandler: ^(NSURL *item, NSError *error) {
+                --remainingAttachments;
+                
                 
                 NSData *data = [NSData dataWithContentsOfURL:(NSURL*)item];
             
-                NSString *base64 = [data convertToBase64];
+//                NSString *base64 = [data convertToBase64];
                 NSString *suggestedName = item.lastPathComponent;
                 
 
@@ -292,26 +335,27 @@
 
                 NSURL *groupContainerURL = [fileManager containerURLForSecurityApplicationGroupIdentifier:SHAREEXT_GROUP_IDENTIFIER];
 
-                NSString *documentsDirectoryPath = groupContainerURL.path;//[NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) objectAtIndex:0];
+//                NSString *documentsDirectoryPath = groupContainerURL.path;//[NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) objectAtIndex:0];
                 
                 NSURL *writableUrl = [groupContainerURL URLByAppendingPathComponent:suggestedName];
                 
-                NSString *writablePath = [documentsDirectoryPath stringByAppendingPathComponent:suggestedName];
+//                NSString *writablePath = [documentsDirectoryPath stringByAppendingPathComponent:suggestedName];
                 
                 
             
-                if (![fileManager fileExistsAtPath:writablePath]){
-                    [fileManager removeItemAtPath:writablePath error: NULL];
+                if (![fileManager fileExistsAtPath: writableUrl.path]){
+                    [fileManager removeItemAtPath:writableUrl.path error: NULL];
                 }
 
+                [fileManager copyItemAtURL: item toURL:writableUrl error: NULL];
+                
                 [data writeToURL:writableUrl atomically:true];
 //                [data writeToFile:writablePath atomically:true];
                 
 //                [self debug:[NSString stringWithFormat:@"item provider = %CGSIZE", [image size]]];
-                NSData *reducedData = UIImageJPEGRepresentation(image, 0.1);
-                base64 = [reducedData convertToBase64];
+//                NSData *reducedData = UIImageJPEGRepresentation(image, 0.1);
+//                base64 = [reducedData convertToBase64];
                 
-                NSString *url = [item absoluteURL].absoluteString;
                 
                 CIDetector *detector = [CIDetector detectorOfType:CIDetectorTypeQRCode context:nil options:@{ CIDetectorAccuracy : CIDetectorAccuracyHigh }];
 
@@ -324,13 +368,11 @@
                 
                 NSDictionary *dict = nil;
                 
-//                NSString *fileUrl = [@"file://" stringByAppendingString:writablePath];
                 NSString *fileUrl = [writableUrl absoluteURL].absoluteString;
                 
                 if (qrString){
                 dict = @{
                                            @"text" : self.contentText,
-//                                           @"data" : base64,
                                            @"url" : fileUrl,//writablePath,//url,
                                            @"uti"  : uti,
                                            @"utis" : itemProvider.registeredTypeIdentifiers,
@@ -343,7 +385,6 @@
                 else {
                     dict = @{
                                            @"text" : self.contentText,
-//                                           @"data" : base64,
                                            @"url" : fileUrl, //writablePath,//url,
                                            @"uti"  : uti,
                                            @"utis" : itemProvider.registeredTypeIdentifiers,
