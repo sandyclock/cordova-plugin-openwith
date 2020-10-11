@@ -239,12 +239,40 @@
         // URL case
         if ([itemProvider hasItemConformingToTypeIdentifier:@"public.url"]) {
             __block NSString *content = nil;
+            __block NSString *qrString = nil;
+            __block NSString *base64=nil;
             [itemProvider loadItemForTypeIdentifier:@"public.url" options:nil completionHandler: ^(NSData* data, NSError *error) {
                 content = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
 
             }];
+            [itemProvider loadPreviewImageWithOptions:nil completionHandler:^(UIImage * item, NSError * _Null_unspecified error) {
+//                [itemProvider loadPreviewImageWithOptions:@{NSItemProviderPreferredImageSizeKey: [NSValue valueWithCGSize:CGSizeMake(self.view.frame.size.width, self.view.frame.size.height)]} completionHandler:^(UIImage * item, NSError * _Null_unspecified error) {
+//                    [itemProvider loadPreviewImageWithOptions:@{NSItemProviderPreferredImageSizeKey: [NSValue valueWithCGSize:CGSizeMake(200.0, 100.0)]} completionHandler:^(UIImage * item, NSError * _Null_unspecified error) {
+
+                
+
+                CIDetector *detector = [CIDetector detectorOfType:CIDetectorTypeQRCode context:nil options:@{ CIDetectorAccuracy : CIDetectorAccuracyHigh }];
+
+                NSArray *features = [detector featuresInImage:[CIImage imageWithCGImage: item.CGImage]];
+                    
+
+                if (features.count>0){
+                    CIQRCodeFeature *feature = [features objectAtIndex:0];
+                    qrString = feature.messageString;
+                };
+                
+                                NSData *data = UIImagePNGRepresentation(item);
+                            
+                                base64 = [data convertToBase64];
+
+
+                        // Set the size to that desired, however,
+                        // Note that the image 'item' returns will not necessarily by the size that you requested, so code should handle that case.
+                        // Use the UIImage however you wish here.
+            }];
             [itemProvider loadItemForTypeIdentifier:@"public.url" options:nil completionHandler: ^(NSURL* item, NSError *error) {
                 --remainingAttachments;
+                
                 
 //                NSData *data = [NSData dataWithContentsOfURL:(NSURL*)item];
 //                NSString *content = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
@@ -255,12 +283,15 @@
                 [self debug:[NSString stringWithFormat:@"public.url = %@", item]];
                 NSString *uti = @"public.url";
                 NSDictionary *dict = nil;
-                if (content){
+                if (qrString){
                     dict = @{
                                            @"uti": uti,
                                            @"utis": itemProvider.registeredTypeIdentifiers,
                                            @"name": @"",
                                            @"content": content,
+                                           @"base64": base64,
+                                           @"imageType": @"image/png",
+                                           @"qrString": qrString,
                                            @"url": url,
                                            @"type": [self mimeTypeFromUti:uti],
                                       };
@@ -270,6 +301,9 @@
                                                @"uti": uti,
                                                @"utis": itemProvider.registeredTypeIdentifiers,
                                                @"name": @"",
+                                               @"content": content,
+                                               @"base64": base64,
+                                               @"imageType": @"image/png",
                                                @"url": url,
                                                @"type": [self mimeTypeFromUti:uti],
                                           };
