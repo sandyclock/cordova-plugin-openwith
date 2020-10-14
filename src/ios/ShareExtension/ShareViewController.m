@@ -43,31 +43,31 @@
 - (NSString*)convertToBase64 {
     const uint8_t* input = (const uint8_t*)[self bytes];
     NSInteger length = [self length];
-
+    
     static char table[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";
-
+    
     NSMutableData* data = [NSMutableData dataWithLength:((length + 2) / 3) * 4];
     uint8_t* output = (uint8_t*)data.mutableBytes;
-
+    
     NSInteger i;
     for (i=0; i < length; i += 3) {
         NSInteger value = 0;
         NSInteger j;
         for (j = i; j < (i + 3); j++) {
             value <<= 8;
-
+            
             if (j < length) {
                 value |= (0xFF & input[j]);
             }
         }
-
+        
         NSInteger theIndex = (i / 3) * 4;
         output[theIndex + 0] =                    table[(value >> 18) & 0x3F];
         output[theIndex + 1] =                    table[(value >> 12) & 0x3F];
         output[theIndex + 2] = (i + 1) < length ? table[(value >> 6)  & 0x3F] : '=';
         output[theIndex + 3] = (i + 2) < length ? table[(value >> 0)  & 0x3F] : '=';
     }
-
+    
     NSString *ret = [[NSString alloc] initWithData:data encoding:NSASCIIStringEncoding];
 #if ARC_DISABLED
     [ret autorelease];
@@ -80,7 +80,7 @@
     long _verbosityLevel;
     NSUserDefaults *_userDefaults;
     NSString *_backURL;
-
+    
     //- (void)sendResults
 }
 @property (nonatomic) long verbosityLevel;
@@ -163,25 +163,25 @@
 
 
 - (void) openURL:(nonnull NSURL *)url {
-
+    
     SEL selector = NSSelectorFromString(@"openURL:options:completionHandler:");
-
+    
     UIResponder* responder = self;
     while ((responder = [responder nextResponder]) != nil) {
         NSLog(@"responder = %@", responder);
         if([responder respondsToSelector:selector] == true) {
             NSMethodSignature *methodSignature = [responder methodSignatureForSelector:selector];
             NSInvocation *invocation = [NSInvocation invocationWithMethodSignature:methodSignature];
-
+            
             // Arguments
             void (^completion)(BOOL success) = ^void(BOOL success) {
                 NSLog(@"Completions block: %i", success);
-//                [self.extensionContext completeRequestReturningItems:@[] completionHandler:^void(BOOL success){
-////                    usleep(1000000);
-//                    usleep(10000);
-//
-//                }];
-
+                //                [self.extensionContext completeRequestReturningItems:@[] completionHandler:^void(BOOL success){
+                ////                    usleep(1000000);
+                //                    usleep(10000);
+                //
+                //                }];
+                
                 
             };
             if (@available(iOS 13.0, *)) {
@@ -220,12 +220,12 @@
 //}
 
 - (void) viewDidLoad {
-
-//- (void) didSelectPost {
-
+    
+    //- (void) didSelectPost {
+    
     [self setup];
     [self debug:@"[viewDidLoad]"];
-
+    
     __block unsigned long remainingAttachments = (unsigned long)((NSExtensionItem*)self.extensionContext.inputItems[0]).attachments.count;
     __block NSMutableArray *items = [[NSMutableArray alloc] init];
     __block NSDictionary *results = @{
@@ -233,82 +233,85 @@
                                           @"backURL": self.backURL != nil ? self.backURL : @"",
                                           @"items": items,
                                       };
-
+    
+    __block unsigned int numUnnamedImage=0;
+    
     for (NSItemProvider* itemProvider in ((NSExtensionItem*)self.extensionContext.inputItems[0]).attachments) {
         [self debug:[NSString stringWithFormat:@"item provider registered indentifiers = %@", itemProvider.registeredTypeIdentifiers]];
         // URL case
+        
         if ([itemProvider hasItemConformingToTypeIdentifier:@"public.url"]) {
             __block NSString *content = nil;
-            __block NSString *qrString = nil;
-            __block NSString *base64=nil;
+            //            __block NSString *qrString = nil;
+            //            __block NSString *base64=nil;
             [itemProvider loadItemForTypeIdentifier:@"public.url" options:nil completionHandler: ^(NSData* data, NSError *error) {
                 content = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
-
-            }];
-            [itemProvider loadPreviewImageWithOptions:nil completionHandler:^(UIImage * item, NSError * _Null_unspecified error) {
-//                [itemProvider loadPreviewImageWithOptions:@{NSItemProviderPreferredImageSizeKey: [NSValue valueWithCGSize:CGSizeMake(self.view.frame.size.width, self.view.frame.size.height)]} completionHandler:^(UIImage * item, NSError * _Null_unspecified error) {
-//                    [itemProvider loadPreviewImageWithOptions:@{NSItemProviderPreferredImageSizeKey: [NSValue valueWithCGSize:CGSizeMake(200.0, 100.0)]} completionHandler:^(UIImage * item, NSError * _Null_unspecified error) {
-
                 
-
-                CIDetector *detector = [CIDetector detectorOfType:CIDetectorTypeQRCode context:nil options:@{ CIDetectorAccuracy : CIDetectorAccuracyHigh }];
-
-                NSArray *features = [detector featuresInImage:[CIImage imageWithCGImage: item.CGImage]];
-                    
-
-                if (features.count>0){
-                    CIQRCodeFeature *feature = [features objectAtIndex:0];
-                    qrString = feature.messageString;
-                };
-                
-                                NSData *data = UIImagePNGRepresentation(item);
-                            
-                                base64 = [data convertToBase64];
-
-
-                        // Set the size to that desired, however,
-                        // Note that the image 'item' returns will not necessarily by the size that you requested, so code should handle that case.
-                        // Use the UIImage however you wish here.
             }];
+            //            [itemProvider loadPreviewImageWithOptions:nil completionHandler:^(UIImage * item, NSError * _Null_unspecified error) {
+            ////                [itemProvider loadPreviewImageWithOptions:@{NSItemProviderPreferredImageSizeKey: [NSValue valueWithCGSize:CGSizeMake(self.view.frame.size.width, self.view.frame.size.height)]} completionHandler:^(UIImage * item, NSError * _Null_unspecified error) {
+            ////                    [itemProvider loadPreviewImageWithOptions:@{NSItemProviderPreferredImageSizeKey: [NSValue valueWithCGSize:CGSizeMake(200.0, 100.0)]} completionHandler:^(UIImage * item, NSError * _Null_unspecified error) {
+            //
+            //
+            //
+            //                CIDetector *detector = [CIDetector detectorOfType:CIDetectorTypeQRCode context:nil options:@{ CIDetectorAccuracy : CIDetectorAccuracyHigh }];
+            //
+            //                NSArray *features = [detector featuresInImage:[CIImage imageWithCGImage: item.CGImage]];
+            //
+            //
+            //                if (features.count>0){
+            //                    CIQRCodeFeature *feature = [features objectAtIndex:0];
+            //                    qrString = feature.messageString;
+            //                };
+            //
+            //                                NSData *data = UIImagePNGRepresentation(item);
+            //
+            //                                base64 = [data convertToBase64];
+            //
+            //
+            //                        // Set the size to that desired, however,
+            //                        // Note that the image 'item' returns will not necessarily by the size that you requested, so code should handle that case.
+            //                        // Use the UIImage however you wish here.
+            //            }];
             [itemProvider loadItemForTypeIdentifier:@"public.url" options:nil completionHandler: ^(NSURL* item, NSError *error) {
                 --remainingAttachments;
                 
                 
-//                NSData *data = [NSData dataWithContentsOfURL:(NSURL*)item];
-//                NSString *content = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
-
+                //                NSData *data = [NSData dataWithContentsOfURL:(NSURL*)item];
+                //                NSString *content = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+                
                 NSString *url = [item absoluteURL].absoluteString;
                 NSLog(@"[ShareViewController.m]%@", url);
-
+                
                 [self debug:[NSString stringWithFormat:@"public.url = %@", item]];
                 NSString *uti = @"public.url";
                 NSDictionary *dict = nil;
-                if (qrString){
-                    dict = @{
-                                           @"uti": uti,
-                                           @"utis": itemProvider.registeredTypeIdentifiers,
-                                           @"name": @"",
-                                           @"content": content,
-                                           @"base64": base64,
-                                           @"imageType": @"image/png",
-                                           @"qrString": qrString,
-                                           @"url": url,
-                                           @"type": [self mimeTypeFromUti:uti],
-                                      };
-                }
-                else {
+                //                if (qrString){
+                //                    dict = @{
+                //                                           @"uti": uti,
+                //                                           @"utis": itemProvider.registeredTypeIdentifiers,
+                //                                           @"name": @"",
+                //                                           @"content": content,
+                //                                           @"base64": base64,
+                //                                           @"imageType": @"image/png",
+                //                                           @"qrString": qrString,
+                //                                           @"url": url,
+                //                                           @"type": [self mimeTypeFromUti:uti],
+                //                                      };
+                //                }
+                //                else {
                     dict = @{
                                                @"uti": uti,
                                                @"utis": itemProvider.registeredTypeIdentifiers,
                                                @"name": @"",
                                                @"content": content,
-                                               @"base64": base64,
+                    //                                               @"base64": base64,
                                                @"imageType": @"image/png",
                                                @"url": url,
                                                @"type": [self mimeTypeFromUti:uti],
                                           };
-
-                }
+                
+                //                }
                 [items addObject:dict];
                 if (remainingAttachments == 0) {
                     [self sendResults:results];
@@ -337,81 +340,115 @@
         }
         // IMAGE case
         else if ([itemProvider hasItemConformingToTypeIdentifier:@"public.image"]) {
-            [self debug:[NSString stringWithFormat:@"item provider = %@", itemProvider]];
-
-// We will load from NSURL ourselves because it will always give use raw data, instead of UIImage. To save an UIImage, we have to do a format converstion,
-// whereas we want to perserve the original file.
-//            __block NSData *data = [[NSData alloc] init];
-            __block UIImage *image = [[UIImage alloc] init];
-            [itemProvider loadItemForTypeIdentifier:@"public.image" options:nil completionHandler: ^(id<NSSecureCoding> item, NSError *error) {
-                                                if([(NSObject*)item isKindOfClass:[NSURL class]]) {
-                                                    NSData *_data = [NSData dataWithContentsOfURL:(NSURL*)item];
-                                                    image = [UIImage imageWithData:_data];
-                                                }
-                                                if([(NSObject*)item isKindOfClass:[UIImage class]]) {
-//                                    data = UIImagePNGRepresentation((UIImage*)item);
-                                                    image = (UIImage *)item;
-                                                }
-
-            }];
-            
-            [itemProvider loadItemForTypeIdentifier:@"public.image" options:nil completionHandler: ^(NSURL *item, NSError *error) {
                 --remainingAttachments;
                 
                 
-//                NSData *data = [NSData dataWithContentsOfURL:(NSURL*)item];
+            [self debug:[NSString stringWithFormat:@"item provider = %@", itemProvider]];
             
-//                NSString *base64 = [data convertToBase64];
-                NSString *suggestedName = item.lastPathComponent;
+            // We will load from NSURL ourselves because it will always give use raw data, instead of UIImage. To save an UIImage, we have to do a format converstion,
+            // whereas we want to perserve the original file.
+            //            __block NSData *data = [[NSData alloc] init];
+            [itemProvider loadItemForTypeIdentifier:@"public.image" options:nil completionHandler: ^(id<NSSecureCoding> item, NSError *error) {
+                NSLog(@"[ShareViewController.m: error check 1:]%@", error);
+                __block UIImage *image = [[UIImage alloc] init];
+                NSString *suggestedName = nil;
                 
+            
+                NSString *mimeType= nil;//@"image/jpeg";
+                
+                NSFileManager *fileManager  = [NSFileManager defaultManager];
+
+                NSURL *groupContainerURL = [fileManager containerURLForSecurityApplicationGroupIdentifier:SHAREEXT_GROUP_IDENTIFIER];
+
+                NSURL *writableUrl = nil;
 
                 NSString *uti = @"public.image";
 
+                if([(NSObject*)item isKindOfClass:[NSURL class]]) {
+                    NSURL *fileUrl = (NSURL*) item;
+                    NSData *_data = [NSData dataWithContentsOfURL:(NSURL*)item];
+                    image = [UIImage imageWithData:_data];
+                    suggestedName = [(NSURL *)item lastPathComponent];
+                    
                 NSString *registeredType = nil;
                 if ([itemProvider.registeredTypeIdentifiers count] > 0) {
                     registeredType = itemProvider.registeredTypeIdentifiers[0];
                 } else {
                     registeredType = uti;
                 }
-
-                NSString *mimeType =  [self mimeTypeFromUti:registeredType];
                 
-
-                NSString *qrString = nil;
-
+                    mimeType =  [self mimeTypeFromUti:registeredType];
                     
-//                UIImage *image =    [UIImage imageWithData: data];
                 
-                NSFileManager *fileManager  = [NSFileManager defaultManager];
+                
+                    //                NSString *documentsDirectoryPath = groupContainerURL.path;//[NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) objectAtIndex:0];
+                
+                    writableUrl = [groupContainerURL URLByAppendingPathComponent:suggestedName];
 
-                NSURL *groupContainerURL = [fileManager containerURLForSecurityApplicationGroupIdentifier:SHAREEXT_GROUP_IDENTIFIER];
+                    if (![fileManager fileExistsAtPath: writableUrl.path]){
+                        [fileManager removeItemAtPath:writableUrl.path error: NULL];
+                    }
+                    [fileManager copyItemAtURL:fileUrl toURL:writableUrl error:NULL];
 
-//                NSString *documentsDirectoryPath = groupContainerURL.path;//[NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) objectAtIndex:0];
+                }
+                if([(NSObject*)item isKindOfClass:[UIImage class]]) {
+                    //                                    data = UIImagePNGRepresentation((UIImage*)item);
+                    image = (UIImage *)item;
+                    numUnnamedImage++;
+//                    NSString *num = [NSString stringWithFormat:@"%d", numUnnamedImage];
+                    suggestedName=[[@"shared_image_" stringByAppendingFormat:@"%d", numUnnamedImage] stringByAppendingString:@".JPG"];
+                    mimeType = @"image/jpeg";
                 
-                NSURL *writableUrl = [groupContainerURL URLByAppendingPathComponent:suggestedName];
-                
-//                NSString *writablePath = [documentsDirectoryPath stringByAppendingPathComponent:suggestedName];
-                
-                
+                    writableUrl = [groupContainerURL URLByAppendingPathComponent:suggestedName];
+
+                    NSData *data = UIImagePNGRepresentation(image);
             
                 if (![fileManager fileExistsAtPath: writableUrl.path]){
                     [fileManager removeItemAtPath:writableUrl.path error: NULL];
                 }
+                    
+                    [data writeToURL:writableUrl atomically:true];
 
-                [fileManager copyItemAtURL: item toURL:writableUrl error: NULL];
+                }
+                //
+                //            }];
+                //
+                //            [itemProvider loadItemForTypeIdentifier:@"public.image" options:nil completionHandler: ^(NSURL *item, NSError *error) {
                 
-//                [data writeToURL:writableUrl atomically:true];
-//                [data writeToFile:writablePath atomically:true];
+                NSLog(@"[ShareViewController.m: error check 2:]%@", error);
                 
-//                [self debug:[NSString stringWithFormat:@"item provider = %CGSIZE", [image size]]];
-//                NSData *reducedData = UIImageJPEGRepresentation(image, 0.1);
-//                base64 = [reducedData convertToBase64];
+                
+//                NSData *data = [NSData dataWithContentsOfURL:(NSURL*)item];
+                
+                //                NSString *base64 = [data convertToBase64];
+                
+                
+                
+                
+                NSString *qrString = nil;
+                
+                
+                //                UIImage *image =    [UIImage imageWithData: data];
+                
+                
+                //                NSString *writablePath = [documentsDirectoryPath stringByAppendingPathComponent:suggestedName];
+                
+                
+                
+                
+                //                [fileManager copyItemAtURL: item toURL:writableUrl error: NULL];
+                
+                //                [data writeToFile:writablePath atomically:true];
+                
+                //                [self debug:[NSString stringWithFormat:@"item provider = %CGSIZE", [image size]]];
+                //                NSData *reducedData = UIImageJPEGRepresentation(image, 0.1);
+                //                base64 = [reducedData convertToBase64];
                 
                 
                 CIDetector *detector = [CIDetector detectorOfType:CIDetectorTypeQRCode context:nil options:@{ CIDetectorAccuracy : CIDetectorAccuracyHigh }];
-
+                
                 NSArray *features = [detector featuresInImage:[CIImage imageWithCGImage: image.CGImage]];
-
+                
                 if (features.count>0){
                     CIQRCodeFeature *feature = [features objectAtIndex:0];
                     qrString = feature.messageString;
@@ -444,8 +481,8 @@
                                            @"processed": @YES
                                       };
                 }
-
-
+                
+                
                 [items addObject:dict];
                 if (remainingAttachments == 0) {
                     [self sendResults:results];
@@ -463,23 +500,23 @@
 - (void) sendResults: (NSDictionary*)results {
     [self.userDefaults setValue: results forKey:@"shared"];
     [self.userDefaults synchronize];
-
+    
     // Emit a URL that opens the cordova app
     NSString *url = [NSString stringWithFormat:@"%@://shared", SHAREEXT_URL_SCHEME];
-
-//    [self.extensionContext completeRequestReturningItems:@[] completionHandler:^(BOOL result){
-//        [self openURL:[NSURL URLWithString:url]];
-//    }];
-
+    
+    //    [self.extensionContext completeRequestReturningItems:@[] completionHandler:^(BOOL result){
+    //        [self openURL:[NSURL URLWithString:url]];
+    //    }];
+    
     [self openURL:[NSURL URLWithString:url]];
-
+    
     
     //need to sleep to avoid thread lock. -tanli
     usleep(1000000);
     
     // Shut down the extension
     [self.extensionContext completeRequestReturningItems:@[] completionHandler:nil];
-
+    
 }
 
 
