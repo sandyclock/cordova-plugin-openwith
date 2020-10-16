@@ -65,6 +65,7 @@
     "src/android/com/missiveapp/openwith/OpenWithPlugin.java",
     "src/android/com/missiveapp/openwith/PluginResultSender.java",
     "src/android/com/missiveapp/openwith/Serializer.java",
+    "src/android/com/missiveapp/openwith/IntentActivity.java",
     "src/ios/OpenWithPlugin.m",
     "src/ios/ShareExtension/MainInterface.storyboard",
     "src/ios/ShareExtension/ShareExtension-Info.plist",
