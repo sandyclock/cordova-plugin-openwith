@@ -3,6 +3,7 @@ package com.missiveapp.openwith;
 import android.content.ContentResolver;
 import android.content.Intent;
 import android.net.Uri;
+import android.os.Bundle;
 import android.util.Log;
 import java.util.Arrays;
 import java.util.ArrayList;
@@ -241,7 +242,11 @@ public class OpenWithPlugin extends CordovaPlugin {
      * Converts an intent to JSON
      */
     private JSONObject toJSONObject(final Intent intent) {
+      Bundle extras = intent.getExtras();
         try {
+          if (extras.get("json") !=null){
+            return new JSONObject(extras.get("json").toString());
+          };
             final ContentResolver contentResolver = this.cordova
                 .getActivity().getApplicationContext().getContentResolver();
             return Serializer.toJSONObject(contentResolver, intent);
