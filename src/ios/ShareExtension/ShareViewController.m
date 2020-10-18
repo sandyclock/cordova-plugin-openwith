@@ -162,6 +162,120 @@
 //}
 
 
+//- (nonnull NSString *) assembleDestinationUrlForImageOutput: (nonnull NSString *) filename fileManager: (NSFileManager ) {
+//    NSURL *groupContainerURL = [fileManager containerURLForSecurityApplicationGroupIdentifier:SHAREEXT_GROUP_IDENTIFIER];
+//
+//    NSURL *writableUrl = [groupContainerURL URLByAppendingPathComponent:[filename stringByAppendingString:@".JPG"]];
+//
+//}
+
+- (void) populateDictInfoForImage:(nonnull NSMutableDictionary *)dict writableUrl:(nonnull NSURL *)writableUrl mimeType:(nonnull NSString *)mimeType features:(nonnull NSArray *)features{
+    
+    NSString *fileUrl = [writableUrl absoluteURL].absoluteString;
+
+    [dict setObject:fileUrl forKey:@"fileUrl"];
+    
+    [dict setObject:[writableUrl lastPathComponent] forKey:@"name"];
+    
+    [dict setObject:mimeType forKey:@"type"];
+    
+    [dict setValue:@YES forKey:@"processed"];
+
+    if (features.count>0){
+        CIQRCodeFeature *feature = [features objectAtIndex:0];
+        [dict setObject: feature.messageString forKey:@"qrString"];
+        NSLog(@"[ShareViewController.m: error check 1:]%@", feature.messageString);// feature.messageString;
+    }
+
+
+}
+
+- (void) saveImage:(nonnull NSString *)filename image:(nonnull UIImage *) image  dict: (nonnull NSMutableDictionary *)dict{
+    NSFileManager *fileManager  = [NSFileManager defaultManager];
+    
+    NSURL *groupContainerURL = [fileManager containerURLForSecurityApplicationGroupIdentifier:SHAREEXT_GROUP_IDENTIFIER];
+    
+    NSURL *writableUrl = [groupContainerURL URLByAppendingPathComponent:[filename stringByAppendingString:@".JPG"]];
+    
+    NSData *data = UIImageJPEGRepresentation(image, 1);
+    
+    if (![fileManager fileExistsAtPath: writableUrl.path]){
+        [fileManager removeItemAtPath:writableUrl.path error: NULL];
+    }
+    
+//
+//    NSData *tmpData = UIImagePNGRepresentation(image);
+    
+    NSLog(@"[ShareViewController.m: save image with size:]%lu", data.length);// feature.messageString;
+
+
+
+    [data writeToURL:writableUrl atomically:true];
+    
+    CIDetector *detector = [CIDetector detectorOfType:CIDetectorTypeQRCode context:nil options:@{ CIDetectorAccuracy : CIDetectorAccuracyHigh }];
+
+        CIImage *ciImage = [CIImage imageWithData:data];
+    
+        NSArray *features = [detector featuresInImage: ciImage];//[CIImage imageWithCGImage:CGImageSourceCreateImageAtIndex(source, 0, nil)]];//  [CIImage
+    [self populateDictInfoForImage:dict writableUrl:writableUrl mimeType:(NSString *)kUTTypeJPEG features:features];
+//        if (features.count>0){
+//            CIQRCodeFeature *feature = [features objectAtIndex:0];
+//            [dict setObject: feature.messageString forKey:@"qrString"];
+//            NSLog(@"[ShareViewController.m: error check 1:]%@", feature.messageString);// feature.messageString;
+//        }
+//
+//    NSString *fileUrl = [writableUrl absoluteURL].absoluteString;
+//
+//    [dict setObject:fileUrl forKey:@"fileUrl"];
+//
+//    [dict setObject:[writableUrl lastPathComponent] forKey:@"name"];
+//
+//    [dict setObject:(NSString *)kUTTypeJPEG forKey:@"type"];
+
+    
+//    return writableUrl;
+    //    return  (NSString*) kUTTypeJPEG;
+    
+}
+
+- (void) copyImageFileToSharedDirectory:(nonnull NSURL *)fromURL dict: (nonnull NSMutableDictionary *)dict mimeType:(nonnull NSString*) mimeType{
+    NSFileManager *fileManager  = [NSFileManager defaultManager];
+    
+    NSString *fileNameWithExtension = [fromURL lastPathComponent];
+    NSURL *groupContainerURL = [fileManager containerURLForSecurityApplicationGroupIdentifier:SHAREEXT_GROUP_IDENTIFIER];
+    
+    NSURL *writableUrl = [groupContainerURL URLByAppendingPathComponent:fileNameWithExtension];
+    
+    if (![fileManager fileExistsAtPath: writableUrl.path]){
+        [fileManager removeItemAtPath:writableUrl.path error: NULL];
+    }
+    [fileManager copyItemAtURL:fromURL toURL:writableUrl error:NULL];
+    
+    CIDetector *detector = [CIDetector detectorOfType:CIDetectorTypeQRCode context:nil options:@{ CIDetectorAccuracy : CIDetectorAccuracyHigh }];
+
+        CIImage *ciImage = [CIImage imageWithContentsOfURL: fromURL];
+    
+        NSArray *features = [detector featuresInImage: ciImage];//[CIImage imageWithCGImage:CGImageSourceCreateImageAtIndex(source, 0, nil)]];//  [CIImage
+    [self populateDictInfoForImage:dict writableUrl:writableUrl mimeType:mimeType features:features];
+//        if (features.count>0){
+//            CIQRCodeFeature *feature = [features objectAtIndex:0];
+//            [dict setObject: feature.messageString forKey:@"qrString"];
+//            NSLog(@"[ShareViewController.m: error check 1:]%@", feature.messageString);// feature.messageString;
+//        }
+//
+//    NSString *fileUrl = [writableUrl absoluteURL].absoluteString;
+//
+//    [dict setObject:fileUrl forKey:@"fileUrl"];
+//
+//    [dict setObject:[writableUrl lastPathComponent] forKey:@"name"];
+//
+//    [dict setObject:mimeType forKey:@"type"];
+
+    
+//    return writableUrl;
+    
+}
+
 - (void) openURL:(nonnull NSURL *)url {
     
     SEL selector = NSSelectorFromString(@"openURL:options:completionHandler:");
@@ -219,6 +333,45 @@
 //    [self debug:@"[didSelectPost]"];
 //}
 
+//- (NSArray *)imageImmediateLoadWithContentsOfUrl:(UIImage *) imageToRead {
+//    //    NSData *_rawData = UIImagePNGRepresentation(imageToRead);
+//    //    NSLog(@"[raw data]%@", [_rawData convertToBase64]);
+//    CGImageRef imageRef = [imageToRead CGImage];
+//    CGRect rect = CGRectMake(0.f, 0.f, CGImageGetWidth(imageRef), CGImageGetHeight(imageRef));
+//    CGContextRef bitmapContext = CGBitmapContextCreate(NULL,
+//                                                       rect.size.width,
+//                                                       rect.size.height,
+//                                                       CGImageGetBitsPerComponent(imageRef),
+//                                                       CGImageGetBytesPerRow(imageRef),
+//                                                       CGImageGetColorSpace(imageRef),
+//                                                       CGImageGetBitmapInfo(imageRef)
+//                                                       );
+//    CGContextDrawImage(bitmapContext, rect, imageRef);
+//    //    CGImageRef decompressedImageRef = CGBitmapContextCreateImage(bitmapContext);
+//    NSData *bitmapData=CGBitmapContextGetData(bitmapContext);
+//
+//    CIImage *ciImage = [CIImage imageWithBitmapData:bitmapData bytesPerRow:CGImageGetBytesPerRow(imageRef) size:rect.size format:kCIFormatRG8 colorSpace:CGImageGetColorSpace(imageRef)];
+//
+//    //    CIImage *ciImage = [CIImage imageWithCGImage:decompressedImageRef];
+//
+//    CIDetector *detector = [CIDetector detectorOfType:CIDetectorTypeQRCode context:nil options:@{ CIDetectorAccuracy : CIDetectorAccuracyHigh }];
+//
+//
+//    NSArray *features = [detector featuresInImage: ciImage];//[CIImage imageWithCGImage:CGImageSourceCreateImageAtIndex(source, 0, nil)]];//  [CIImage imageWithData:_tmpdata]];
+//
+//    if (features.count>0){
+//        CIQRCodeFeature *feature = [features objectAtIndex:0];
+//        NSLog(@"[ShareViewController.m: error check 1:]%@", feature.messageString);// feature.messageString;
+//    }
+//
+//
+//    //    UIImage *decompressedImage = [UIImage imageWithCGImage:decompressedImageRef];
+//    //    CGImageRelease(decompressedImageRef);
+//    CGContextRelease(bitmapContext);
+//    return features;
+//    //    return decompressedImage;
+//}
+
 - (void) viewDidLoad {
     
     //- (void) didSelectPost {
@@ -236,11 +389,336 @@
     
     __block unsigned int numUnnamedImage=0;
     
+    
+    
     for (NSItemProvider* itemProvider in ((NSExtensionItem*)self.extensionContext.inputItems[0]).attachments) {
         [self debug:[NSString stringWithFormat:@"item provider registered indentifiers = %@", itemProvider.registeredTypeIdentifiers]];
         // URL case
+        // IMAGE case
+        if ([itemProvider hasItemConformingToTypeIdentifier:@"public.image"]) {
+            
+            
+            [self debug:[NSString stringWithFormat:@"item provider = %@", itemProvider]];
+            
+            // We will load from NSURL ourselves because it will always give use raw data, instead of UIImage. To save an UIImage, we have to do a format converstion,
+            // whereas we want to perserve the original file.
+            //            __block NSData *data = [[NSData alloc] init];
+            //            [itemProvider loadItemForTypeIdentifier:@"public.image" options:nil completionHandler: ^(UIImage *image, NSError *error) {
+            //                NSLog(@"[ShareViewController.m: error check 1.1:]%@", error);
+            //            }];
+            
+            //            [itemProvider loadItemForTypeIdentifier:@"public.file-url" options:nil completionHandler: ^(id<NSSecureCoding> itemUrl, NSError *error) {
+            //                NSLog(@"[ShareViewController.m: error check 1.2:]%@", error);
+            //
+            //                if([(NSObject*)itemUrl isKindOfClass:[NSURL class]]) {
+            //                    NSURL *incomeURL = (NSURL*) itemUrl;
+            ////                    NSData *_data = [NSData dataWithContentsOfURL:(NSURL*)item];
+            ////                    image = [UIImage imageWithData:_data];
+            //
+            //                    CIImage *cgImage = [CIImage imageWithContentsOfURL:incomeURL];
+            //
+            //                    NSArray *features = [detector featuresInImage: cgImage];//[CIImage imageWithCGImage: image.CGImage]];
+            //
+            //                    NSLog(@"[feature check]%lu", (unsigned long) features.count);
+            //                }
+            //
+            //            }];
+            
+            
+            [itemProvider loadItemForTypeIdentifier:@"public.image" options:nil completionHandler: ^(id<NSSecureCoding> item, NSError *error) {
+                --remainingAttachments;
+                
+                NSLog(@"[ShareViewController.m: error check 1.3:]%@", error);
+                __block UIImage *image = [[UIImage alloc] init];
+                //                NSString *suggestedName = nil;
+                
+                
+//                NSString *mimeType= nil;//@"image/jpeg";
+                
+                //                NSFileManager *fileManager  = [NSFileManager defaultManager];
+                //
+                //                NSURL *groupContainerURL = [fileManager containerURLForSecurityApplicationGroupIdentifier:SHAREEXT_GROUP_IDENTIFIER];
+                
+//                NSURL *writableUrl = nil;
+                
+                NSString *uti = @"public.image";
+                
+                NSDictionary *passThroughMimetype = @{
+                    @"image/png": @YES,
+                    @"image/gif": @YES,
+                    @"image/jpeg": @YES,
+                    @"image/tiff": @YES,
+                    @"png": @YES,
+                    @"gif": @YES,
+                    @"jpeg": @YES,
+                    @"tiff": @YES
+                };
+                if([(NSObject*)item isKindOfClass:[NSURL class]]) {
+                    NSURL *incomeURL = (NSURL*) item;
+                    //                    NSData *_data = [NSData dataWithContentsOfURL:(NSURL*)item];
+                    //                    image = [UIImage imageWithData:_data];
+                    
+//                    CIImage *cgImage = [CIImage imageWithContentsOfURL:incomeURL];
+                    image = [UIImage imageWithContentsOfFile:incomeURL.path];
+                    
+//                    CIDetector *detector = [CIDetector detectorOfType:CIDetectorTypeQRCode context:nil options: @{ CIDetectorAccuracy : CIDetectorAccuracyHigh }];
+                    //                    [detector featuresInImage: cgImage];
+                    //                    NSArray *features = [detector featuresInImage: cgImage];//[CIImage imageWithCGImage: image.CGImage]];
+                    //
+                    //                    NSLog(@"[feature check]%lu", (unsigned long) features.count);
+                    
+                    
+                    //                    NSLog(@"[CIImage size check]%lu", (unsigned long) _data.length);
+                    //                    NSData *_tmpdata = UIImageJPEGRepresentation(image, 1);
+                    
+                    //                    CGImageSourceRef source = CGImageSourceCreateWithURL((CFURLRef)incomeURL, nil);
+                    //                    CGImage cg = CGImageSourceCreateImageAtIndex(source, 0, nil);
+                    //                    CIDetector *detector = [CIDetector detectorOfType:CIDetectorTypeQRCode context:nil options:@{ CIDetectorAccuracy : CIDetectorAccuracyHigh }];
+                    
+                    //                CGImage *cgImage = (__bridge CGImage *)[CIImage imageWithCGImage: image.CGImage];
+                    //                    CIImage *obj = [CIImage imageWithCGImage:CGImageSourceCreateImageAtIndex(source, 0, nil)];
+                    
+                    
+                    //                    if (detector){
+                    
+                    //                        UIImage *imageRead =
+                    //                    [self imageImmediateLoadWithContentsOfUrl: image];
+                    //                        NSData *png = UIImagePNGRepresentation([self imageImmediateLoadWithContentsOfUrl: image]);
+                    //                        CIImage *obj = [CIImage imageWithContentsOfURL:incomeURL];//:CGImageSourceCreateImageAtIndex(source, 0, nil)];
+                    
+                    //                        CIImage *obj = [CIImage imageWithData:png];//:CGImageSourceCreateImageAtIndex(source, 0, nil)];
+                    //                        CIImage *obj = [CIImage imageWithCGImage: imageRead.CGImage];
+                    //
+                    //                        NSArray *features = [detector featuresInImage: obj];//[CIImage imageWithCGImage:CGImageSourceCreateImageAtIndex(source, 0, nil)]];//  [CIImage imageWithData:_tmpdata]];
+                    //
+                    //                        if (features.count>0){
+                    //                            CIQRCodeFeature *feature = [features objectAtIndex:0];
+                    //                            NSLog(@"[ShareViewController.m: error check 1:]%@", feature.messageString);// feature.messageString;
+                    //                        }
+                    //
+                    //                        obj = nil;
+                    //
+                    //                    }
+                    //                    detector = nil;
+                    
+                    
+                    
+                    //                    suggestedName = [(NSURL *)item lastPathComponent];
+                    
+                    
+                    //                    else {
+                    //                        registeredType = uti;
+                    //                    }
+                    
+                    
+                    
+                    NSDictionary *_dict = @{
+//                        //                                          @"text" : self.contentText,
+//                        @"url" : fileUrl,//writablePath,//url,
+                        @"uti"  : uti,
+                        @"utis" : itemProvider.registeredTypeIdentifiers,
+//                        @"name" : [writableUrl lastPathComponent],
+//                        @"type" : mimeType,
+                        @"processed": @YES,
+                        //                                          @"qrString": qrString,
+                    };
+                    
+                    NSMutableDictionary *dict = [NSMutableDictionary  new];
+                    [dict addEntriesFromDictionary:_dict];
+                    
+                    if (self.contentText){
+                        [dict setValue:self.contentText forKey:@"text"];
+                    }
+
+                    NSString *registeredType = nil;
+                    if ([itemProvider.registeredTypeIdentifiers count] > 0) {
+                        registeredType = itemProvider.registeredTypeIdentifiers[0];
+                    };
+                    NSString *mimeType =  [self mimeTypeFromUti:registeredType];
+
+                    if (mimeType==nil || passThroughMimetype[mimeType]==nil){
+                        //this is not a pass through type so we will transfer it to jpeg
+                        NSString *fileName = [[incomeURL lastPathComponent] stringByDeletingPathExtension];
+                        [self saveImage:fileName image:image dict:dict];
+                        
+//                        mimeType = (NSString *) kUTTypeJPEG;
+                    }
+                    else {
+                        [self copyImageFileToSharedDirectory:incomeURL dict:dict mimeType:mimeType];
+                    }
+                    
+                    
+//                    NSString *fileUrl = [writableUrl absoluteURL].absoluteString;
+                    
+                    
+//                    NSString *qrString = nil;
+                    
+//                                                        NSArray *features = [detector featuresInImage: [CIImage imageWithCGImage: image.CGImage]];
+//
+//                                                        if (features.count>0){
+//                                                            CIQRCodeFeature *feature = [features objectAtIndex:0];
+//                                                            qrString = feature.messageString;
+//                                                        }
+                    
+//                    if (qrString){
+//                        [dict setValue:qrString forKey:@"qrString"];
+//                    }
+                    
+                    
+                    
+                    
+                    [items addObject:dict];
+                    if (remainingAttachments == 0) {
+                        [self sendResults:results];
+                    }
+                    
+                    
+                    
+                    //                NSString *documentsDirectoryPath = groupContainerURL.path;//[NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) objectAtIndex:0];
+                    
+                    
+                }
+                if([(NSObject*)item isKindOfClass:[UIImage class]]) {
+                    //                                    data = UIImagePNGRepresentation((UIImage*)item);
+                    image = (UIImage *)item;
+                    numUnnamedImage++;
+                    
+
+                    //                    NSString *num = [NSString stringWithFormat:@"%d", numUnnamedImage];
+                    //                    mimeType = @"image/jpeg";
+                    
+//                    mimeType = (NSString *)kUTTypeJPEG;
+                    
+                    
+                    
+                    
+                    //                    writableUrl = [groupContainerURL URLByAppendingPathComponent:suggestedName];
+                    //
+                    //                    NSData *data = UIImagePNGRepresentation(image);
+                    //
+                    //                    if (![fileManager fileExistsAtPath: writableUrl.path]){
+                    //                        [fileManager removeItemAtPath:writableUrl.path error: NULL];
+                    //                    }
+                    //
+                    //                    [data writeToURL:writableUrl atomically:true];
+//                    NSString *fileUrl = [writableUrl absoluteURL].absoluteString;
+                    
+                    NSDictionary *_dict = @{
+                        //                                          @"text" : self.contentText,
+//                        @"url" : fileUrl,//writablePath,//url,
+                        @"uti"  : uti,
+                        @"utis" : itemProvider.registeredTypeIdentifiers,
+//                        @"name" : [writableUrl lastPathComponent],
+//                        @"type" : mimeType,
+                        @"processed": @YES,
+                        //                                          @"qrString": qrString,
+                    };
+                    NSMutableDictionary *dict = [NSMutableDictionary  new];
+                    [dict addEntriesFromDictionary:_dict];
+                    if (self.contentText){
+                        [dict setValue:self.contentText forKey:@"text"];
+                    }
+
+//                    NSString *qrString = nil;
+//
+//                    CIDetector *detector = [CIDetector detectorOfType:CIDetectorTypeQRCode context:nil options:@{ CIDetectorAccuracy : CIDetectorAccuracyHigh }];
+//
+//                    NSArray *features = [detector featuresInImage: [CIImage imageWithCGImage: image.CGImage]];
+                    
+                    NSString *suggestedName=[@"shared_image_" stringByAppendingFormat:@"%d", numUnnamedImage];// stringByAppendingString:@".JPG"];
+
+                    [self saveImage:suggestedName image:image dict:dict];
+
+                
+                    
+                    [items addObject:dict];
+                    if (remainingAttachments == 0) {
+                        [self sendResults:results];
+                    }
+                    
+                    
+                }
+                //
+                //            }];
+                //
+                //            [itemProvider loadItemForTypeIdentifier:@"public.image" options:nil completionHandler: ^(NSURL *item, NSError *error) {
+                
+                NSLog(@"[ShareViewController.m: error check 2:]%@", error);
+                
+                
+                //                NSData *data = [NSData dataWithContentsOfURL:(NSURL*)item];
+                
+                //                NSString *base64 = [data convertToBase64];
+                
+                
+                
+                
+                //                NSString *qrString = nil;
+                
         
-        if ([itemProvider hasItemConformingToTypeIdentifier:@"public.url"]) {
+                //                UIImage *image =    [UIImage imageWithData: data];
+                
+                
+                //                NSString *writablePath = [documentsDirectoryPath stringByAppendingPathComponent:suggestedName];
+                
+                
+                
+                
+                //                [fileManager copyItemAtURL: item toURL:writableUrl error: NULL];
+                
+                //                [data writeToFile:writablePath atomically:true];
+                
+                //                [self debug:[NSString stringWithFormat:@"item provider = %CGSIZE", [image size]]];
+                //                NSData *reducedData = UIImageJPEGRepresentation(image, 0.1);
+                //                base64 = [reducedData convertToBase64];
+                
+                
+                
+                
+                //                CIImage *cgImage = [CIImage imageWithCGImage: image.CGImage];
+                
+                
+                
+                //                NSArray *features = [detector featuresInImage: cgImage];//[CIImage imageWithCGImage: image.CGImage]];
+                
+                //                if (features.count>0){
+                //                    CIQRCodeFeature *feature = [features objectAtIndex:0];
+                //                    qrString = feature.messageString;
+                //                }
+                
+                //                NSString *fileUrl = [writableUrl absoluteURL].absoluteString;
+                //
+                //                NSDictionary *_dict = @{
+                //                    //                                          @"text" : self.contentText,
+                //                    @"url" : fileUrl,//writablePath,//url,
+                //                    @"uti"  : uti,
+                //                    @"utis" : itemProvider.registeredTypeIdentifiers,
+                //                    @"name" : [writableUrl lastPathComponent],
+                //                    @"type" : mimeType,
+                //                    @"processed": @YES,
+                //                    //                                          @"qrString": qrString,
+                //                };
+                //                NSMutableDictionary *dict = [NSMutableDictionary  new];
+                //                [dict addEntriesFromDictionary:_dict];
+                //
+                //                if (qrString){
+                //                    [dict setValue:qrString forKey:@"qrString"];
+                //                }
+                //
+                //                if (self.contentText){
+                //                    [dict setValue:self.contentText forKey:@"text"];
+                //                }
+                //
+                //
+                //
+                //                [items addObject:dict];
+                //                if (remainingAttachments == 0) {
+                //                    [self sendResults:results];
+                //                }
+            }
+        ];
+        }
+        else if ([itemProvider hasItemConformingToTypeIdentifier:@"public.url"]) {
             __block NSString *content = nil;
             //            __block NSString *qrString = nil;
             //            __block NSString *base64=nil;
@@ -337,158 +815,6 @@
                     [self sendResults:results];
                 }
             }];
-        }
-        // IMAGE case
-        else if ([itemProvider hasItemConformingToTypeIdentifier:@"public.image"]) {
-                --remainingAttachments;
-                
-                
-            [self debug:[NSString stringWithFormat:@"item provider = %@", itemProvider]];
-            
-            // We will load from NSURL ourselves because it will always give use raw data, instead of UIImage. To save an UIImage, we have to do a format converstion,
-            // whereas we want to perserve the original file.
-            //            __block NSData *data = [[NSData alloc] init];
-            [itemProvider loadItemForTypeIdentifier:@"public.image" options:nil completionHandler: ^(id<NSSecureCoding> item, NSError *error) {
-                NSLog(@"[ShareViewController.m: error check 1:]%@", error);
-                __block UIImage *image = [[UIImage alloc] init];
-                NSString *suggestedName = nil;
-                
-            
-                NSString *mimeType= nil;//@"image/jpeg";
-                
-                NSFileManager *fileManager  = [NSFileManager defaultManager];
-
-                NSURL *groupContainerURL = [fileManager containerURLForSecurityApplicationGroupIdentifier:SHAREEXT_GROUP_IDENTIFIER];
-
-                NSURL *writableUrl = nil;
-
-                NSString *uti = @"public.image";
-
-                if([(NSObject*)item isKindOfClass:[NSURL class]]) {
-                    NSURL *fileUrl = (NSURL*) item;
-                    NSData *_data = [NSData dataWithContentsOfURL:(NSURL*)item];
-                    image = [UIImage imageWithData:_data];
-                    suggestedName = [(NSURL *)item lastPathComponent];
-                    
-                NSString *registeredType = nil;
-                if ([itemProvider.registeredTypeIdentifiers count] > 0) {
-                    registeredType = itemProvider.registeredTypeIdentifiers[0];
-                } else {
-                    registeredType = uti;
-                }
-                
-                    mimeType =  [self mimeTypeFromUti:registeredType];
-                    
-                
-                
-                    //                NSString *documentsDirectoryPath = groupContainerURL.path;//[NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) objectAtIndex:0];
-                
-                    writableUrl = [groupContainerURL URLByAppendingPathComponent:suggestedName];
-
-                    if (![fileManager fileExistsAtPath: writableUrl.path]){
-                        [fileManager removeItemAtPath:writableUrl.path error: NULL];
-                    }
-                    [fileManager copyItemAtURL:fileUrl toURL:writableUrl error:NULL];
-
-                }
-                if([(NSObject*)item isKindOfClass:[UIImage class]]) {
-                    //                                    data = UIImagePNGRepresentation((UIImage*)item);
-                    image = (UIImage *)item;
-                    numUnnamedImage++;
-//                    NSString *num = [NSString stringWithFormat:@"%d", numUnnamedImage];
-                    suggestedName=[[@"shared_image_" stringByAppendingFormat:@"%d", numUnnamedImage] stringByAppendingString:@".JPG"];
-                    mimeType = @"image/jpeg";
-                
-                    writableUrl = [groupContainerURL URLByAppendingPathComponent:suggestedName];
-
-                    NSData *data = UIImagePNGRepresentation(image);
-            
-                if (![fileManager fileExistsAtPath: writableUrl.path]){
-                    [fileManager removeItemAtPath:writableUrl.path error: NULL];
-                }
-                    
-                    [data writeToURL:writableUrl atomically:true];
-
-                }
-                //
-                //            }];
-                //
-                //            [itemProvider loadItemForTypeIdentifier:@"public.image" options:nil completionHandler: ^(NSURL *item, NSError *error) {
-                
-                NSLog(@"[ShareViewController.m: error check 2:]%@", error);
-                
-                
-//                NSData *data = [NSData dataWithContentsOfURL:(NSURL*)item];
-                
-                //                NSString *base64 = [data convertToBase64];
-                
-                
-                
-                
-                NSString *qrString = nil;
-                
-                
-                //                UIImage *image =    [UIImage imageWithData: data];
-                
-                
-                //                NSString *writablePath = [documentsDirectoryPath stringByAppendingPathComponent:suggestedName];
-                
-                
-                
-                
-                //                [fileManager copyItemAtURL: item toURL:writableUrl error: NULL];
-                
-                //                [data writeToFile:writablePath atomically:true];
-                
-                //                [self debug:[NSString stringWithFormat:@"item provider = %CGSIZE", [image size]]];
-                //                NSData *reducedData = UIImageJPEGRepresentation(image, 0.1);
-                //                base64 = [reducedData convertToBase64];
-                
-                
-                CIDetector *detector = [CIDetector detectorOfType:CIDetectorTypeQRCode context:nil options:@{ CIDetectorAccuracy : CIDetectorAccuracyHigh }];
-                
-                NSArray *features = [detector featuresInImage:[CIImage imageWithCGImage: image.CGImage]];
-                
-                if (features.count>0){
-                    CIQRCodeFeature *feature = [features objectAtIndex:0];
-                    qrString = feature.messageString;
-                }
-                
-                NSDictionary *dict = nil;
-                
-                NSString *fileUrl = [writableUrl absoluteURL].absoluteString;
-                
-                if (qrString){
-                dict = @{
-                                           @"text" : self.contentText,
-                                           @"url" : fileUrl,//writablePath,//url,
-                                           @"uti"  : uti,
-                                           @"utis" : itemProvider.registeredTypeIdentifiers,
-                                           @"name" : suggestedName,
-                                           @"type" : mimeType,
-                                           @"processed": @YES,
-                                           @"qrString": qrString,
-                                      };
-                }
-                else {
-                    dict = @{
-                                           @"text" : self.contentText,
-                                           @"url" : fileUrl, //writablePath,//url,
-                                           @"uti"  : uti,
-                                           @"utis" : itemProvider.registeredTypeIdentifiers,
-                                           @"name" : suggestedName,
-                                           @"type" : mimeType,
-                                           @"processed": @YES
-                                      };
-                }
-                
-                
-                [items addObject:dict];
-                if (remainingAttachments == 0) {
-                    [self sendResults:results];
-                }
-                }
-             ];
         }
         else {
             [self.extensionContext completeRequestReturningItems:@[] completionHandler:nil];
