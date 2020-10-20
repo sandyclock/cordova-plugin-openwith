@@ -115,6 +115,8 @@ SOFTWARE.
       <clobbers target="cordova.openwith" />
     </js-module>
 
+    <framework src="com.google.android.gms:play-services-vision:15.0.+" />
+
     <!-- <edit-config file="AndroidManifest.xml" target="/manifest/application/activity" mode="merge">
     <activity android:launchMode = "singleTask" />
 </edit-config> -->

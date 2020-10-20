@@ -9,9 +9,13 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.util.Log;
+import android.util.SparseArray;
 
 import com.adobe.phonegap.push.FCMService;
 import com.adobe.phonegap.push.PushPlugin;
+import com.google.android.gms.vision.Frame;
+import com.google.android.gms.vision.barcode.Barcode;
+import com.google.android.gms.vision.barcode.BarcodeDetector;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -61,9 +65,9 @@ public class IntentActivity extends Activity {
       forceMainActivityReload(false);
       if (intent.getAction().equals(Intent.ACTION_SEND)){
         //this is an sending activity. We need to process this.
-        ContentResolver resolver = this.getApplicationContext().getContentResolver();
+//        ContentResolver resolver = this.getApplicationContext().getContentResolver();
         try {
-          JSONObject obj = Serializer.toJSONObject(resolver, intent);
+          JSONObject obj = Serializer.toJSONObject(this, intent);
 //          Log.d(LOG_TAG, "obj:");
 //          Log.d(LOG_TAG, obj.toString());
 
@@ -72,6 +76,7 @@ public class IntentActivity extends Activity {
         }
 //        startActivity(intent);
       }
+
 
 //    };
 //      if (!isPushPluginActive && foreground && inline) {
@@ -136,7 +141,9 @@ public class IntentActivity extends Activity {
 //       }
       JSONObject obj = null;
       try {
-        obj = Serializer.toJSONObject(getApplicationContext().getContentResolver(), getIntent());
+//        obj = Serializer.toJSONObject(getApplicationContext().getContentResolver(), getIntent());
+        obj = Serializer.toJSONObject(this, getIntent());
+
         launchIntent.putExtra("json", obj.toString());
       } catch (JSONException e) {
         e.printStackTrace();
@@ -165,6 +172,7 @@ public class IntentActivity extends Activity {
       startActivity(launchIntent);
     }
   }
+
   @Override
   protected void onResume() {
     super.onResume();

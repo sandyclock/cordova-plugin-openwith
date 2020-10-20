@@ -1,10 +1,17 @@
 package com.missiveapp.openwith;
 
 import android.content.ContentResolver;
+import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
+import android.util.SparseArray;
+
+import com.google.android.gms.vision.Frame;
+import com.google.android.gms.vision.barcode.Barcode;
+import com.google.android.gms.vision.barcode.BarcodeDetector;
+
 import java.util.Arrays;
 import java.util.ArrayList;
 import org.apache.cordova.CallbackContext;
@@ -76,6 +83,35 @@ public class OpenWithPlugin extends CordovaPlugin {
         loggerContext = null;
         pendingIntents.clear();
     }
+
+
+//  protected void decodeQR(Intent imgIntent){
+//    Context context = this.cordova.getContext();
+//    BarcodeDetector detector =
+//      new BarcodeDetector.Builder(context)
+//        .setBarcodeFormats(Barcode.DATA_MATRIX | Barcode.QR_CODE)
+//        .build();
+//    if(!detector.isOperational()){
+//      Log.d("QR_READ","Could not set up the detector!");
+//    }
+//    Frame frame = new Frame.Builder().setBitmap(bitmap).build();
+//    SparseArray<Barcode> barcodes = detector.detect(frame);
+//    Log.d("QR_READ","-barcodeLength-"+barcodes.size());
+//    Barcode thisCode=null;
+//    if(barcodes.size()==0){
+//      Log.d("QR_VALUE","--NODATA");
+//    }
+//    else if(barcodes.size()==1){
+//      thisCode = barcodes.valueAt(0);
+//      Log.d("QR_VALUE","--"+thisCode.rawValue);
+//    }
+//    else{
+//      for(int iter=0;iter<barcodes.size();iter++) {
+//        thisCode = barcodes.valueAt(iter);
+//        Log.d("QR_VALUE","--"+thisCode.rawValue);
+//      }
+//    }
+//  }
 
     /**
      * Generic plugin command executor
@@ -247,9 +283,9 @@ public class OpenWithPlugin extends CordovaPlugin {
           if (extras.get("json") !=null){
             return new JSONObject(extras.get("json").toString());
           };
-            final ContentResolver contentResolver = this.cordova
-                .getActivity().getApplicationContext().getContentResolver();
-            return Serializer.toJSONObject(contentResolver, intent);
+//            final ContentResolver contentResolver = this.cordova
+//                .getActivity().getApplicationContext().getContentResolver();
+            return Serializer.toJSONObject(this.cordova.getActivity(), intent);
         } catch (JSONException e) {
             log(ERROR, "Error converting intent to JSON: " + e.getMessage());
             log(ERROR, Arrays.toString(e.getStackTrace()));
