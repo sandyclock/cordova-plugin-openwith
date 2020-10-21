@@ -30,6 +30,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -53,6 +54,9 @@ class Serializer {
 
     static final int MAX_ITEMS = 5;
 
+  public interface PopulateItemsAndSendIntent{
+    void start(JSONArray items);
+  }
     /**
      * Convert an intent to JSON.
      * <p>
@@ -60,32 +64,72 @@ class Serializer {
      * (streams or clip data) sent with the intent.
      * If none are specified, null is return.
      */
-    public static JSONObject toJSONObject(
+  @RequiresApi(api = Build.VERSION_CODES.N)
+  public static void populateAndSendIntent(
       Activity activity,
 //            final ContentResolver contentResolver,
-            final Intent intent)
-            throws JSONException {
-      final ContentResolver contentResolver = activity.getContentResolver();
-        StringBuilder text = new StringBuilder();
-        JSONArray items = readIntent(activity, intent, text);
-//        JSONArray _clipDataItems = itemsFromClipData(contentResolver, intent.getClipData());
-        JSONArray extraItems = itemsFromExtras(contentResolver, intent.getExtras());
-        if (items == null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
-            items = itemsFromClipData(contentResolver, intent.getClipData());
-        }
-        if (items == null || items.length() == 04.1) {
-            items = itemsFromExtras(contentResolver, intent.getExtras());
-        }
-        if (items == null) {
-            return null;
-        }
+    final Intent intent,
+    IntentActivity.StartActivityFun startActivityFun
+    ) throws JSONException {
+//    final ContentResolver contentResolver = activity.getContentResolver();
+//    StringBuilder text = new StringBuilder();
+    PopulateItemsAndSendIntent sendIntent = (JSONArray items)-> {
         final JSONObject action = new JSONObject();
+
+      try {
         action.put("action", translateAction(intent.getAction()));
         action.put("exit", readExitOnSent(intent.getExtras()));
         action.put("items", items);
-        action.put("text", text.toString());
-        return action;
+        String text = intent.getStringExtra(Intent.EXTRA_TEXT);
+        if (text != null) {
+          action.put("text", text);
+        }
+        startActivityFun.start(action);
+      }
+      catch (JSONException e){
+        e.printStackTrace();
+      }
+
+    };
+
+    readIntent(activity, intent, sendIntent);
+
     }
+
+
+//  /**
+//     * Convert an intent to JSON.
+//     * <p>
+//     * This actually only exports stuff necessary to see file content
+//     * (streams or clip data) sent with the intent.
+//     * If none are specified, null is return.
+//     */
+//    public static JSONObject toJSONObject(
+//      Activity activity,
+////            final ContentResolver contentResolver,
+//            final Intent intent)
+//            throws JSONException {
+//      final ContentResolver contentResolver = activity.getContentResolver();
+//        StringBuilder text = new StringBuilder();
+//        JSONArray items = readIntent(activity, intent, text);
+////        JSONArray _clipDataItems = itemsFromClipData(contentResolver, intent.getClipData());
+//        JSONArray extraItems = itemsFromExtras(contentResolver, intent.getExtras());
+//        if (items == null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+//            items = itemsFromClipData(contentResolver, intent.getClipData());
+//        }
+//        if (items == null || items.length() == 04.1) {
+//            items = itemsFromExtras(contentResolver, intent.getExtras());
+//        }
+//        if (items == null) {
+//            return null;
+//        }
+//        final JSONObject action = new JSONObject();
+//        action.put("action", translateAction(intent.getAction()));
+//        action.put("exit", readExitOnSent(intent.getExtras()));
+//        action.put("items", items);
+//        action.put("text", text.toString());
+//        return action;
+//    }
 
     public static String translateAction(final String action) {
         if ("android.intent.action.SEND".equals(action) ||
@@ -109,13 +153,15 @@ class Serializer {
         return extras.getBoolean("exit_on_sent", false);
     }
 
-    public static JSONArray readIntent(Activity activity, Intent intent, StringBuilder text) {
+    @RequiresApi(api = Build.VERSION_CODES.N)
+    public static void readIntent(Activity activity, Intent intent, PopulateItemsAndSendIntent sendIntent) {
         String action = intent.getAction();
         String type = intent.getType();
 
         if (Intent.ACTION_SEND.equals(action) && type != null) {
             if ("text/plain".equals(type)) {
-              return handleUrl(activity, intent, text);
+              handleUrlAndSend(activity, intent, sendIntent);
+              return;
 //                text.append(intent.getStringExtra(Intent.EXTRA_TEXT));
 //                //this is a url. we
 //                JSONObject urlItem = new JSONObject();
@@ -123,20 +169,28 @@ class Serializer {
 //                return new JSONArray() {};
             }
             else if (type.startsWith("image/")) {
-                return handleSendImage(activity, intent, type ); // Handle single image being sent
+                JSONArray items =  handleSendImage(activity, intent, type ); // Handle single image being sent
+                sendIntent.start(items);
+                return;
             }
         }
         else if (Intent.ACTION_SEND_MULTIPLE.equals(action) && type != null) {
             if (type.startsWith("image/")) {
-                return handleSendMultipleImages( activity, type, intent); // Handle multiple images being sent
+                JSONArray items =  handleSendMultipleImages( activity, type, intent); // Handle multiple images being sent
+              sendIntent.start(items);
+              return;
             }
         }
-        return null;
+//        return null;
     }
 
+  public interface PopulateHtmlTextAndSendIntent {
+    void start(String htmltext);
+    }
+
+
   @RequiresApi(api = Build.VERSION_CODES.N)
-  static JSONArray handleUrl(Activity activity, Intent intent, StringBuilder text) {
-    text.append(intent.getStringExtra(Intent.EXTRA_TEXT));
+  static void handleUrlAndSend(Activity activity, Intent intent, PopulateItemsAndSendIntent _sendIntent) {
 
     Bundle extras = intent.getExtras();
     if (extras!=null){
@@ -153,59 +207,71 @@ class Serializer {
 //    StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder().permitAll().build();
 //    StrictMode.setThreadPolicy(policy);
 
-    ExecutorService executor = Executors.newSingleThreadExecutor();
-    Future<String> future = executor.submit(()->{
-      HttpURLConnection urlConnection = null;
-      String htmlText = null;
-      try {
-        URL url = new URL(browserUrl);
 
-
-        urlConnection = (HttpURLConnection) url
-          .openConnection();
-
-        InputStream in = urlConnection.getInputStream();
-
-        htmlText = new BufferedReader(
-          new InputStreamReader(in, StandardCharsets.UTF_8)).lines()
-          .collect(Collectors.joining("\n"));
-//      InputStreamReader isw = new InputStreamReader(in);
-//      String text = IOUtils.toByteArray(in);
-//
-//      int data = isw.read();
-//      while (data != -1) {
-//        char current = (char) data;
-//        data = isw.read();
-//        System.out.print(current);
-//      }
-      } catch (Exception e) {
-        e.printStackTrace();
-      } finally {
-        if (urlConnection != null) {
-          urlConnection.disconnect();
-        }
-      };
-      return htmlText;
-
-    });
-
-
+    try {
     JSONObject urlItem = new JSONObject();
     JSONArray items = new JSONArray();
-    try {
-//      if (htmlText!=null){
+//      if (htmlText != null) {
 //        urlItem.put("content", htmlText);
 //      }
 
-      urlItem.put("url", text.toString());
+      urlItem.put("url", browserUrl);
       urlItem.put("uti", "public.url");
       items.put(urlItem);
-    } catch (JSONException e) {
+
+      _sendIntent.start((items));
+    }
+    catch (JSONException e){
       e.printStackTrace();
     }
-    finally {
-      return items;
-    }
+
+//    ExecutorService executor = Executors.newSingleThreadExecutor();
+//
+//    Future future = executor.submit(()->{
+//      HttpURLConnection urlConnection = null;
+//      String htmlText = null;
+//      try {
+//        URL url = new URL(browserUrl);
+//
+//
+//        urlConnection = (HttpURLConnection) url
+//          .openConnection();
+//
+//        InputStream in = urlConnection.getInputStream();
+//
+//        htmlText = new BufferedReader(
+//          new InputStreamReader(in, StandardCharsets.UTF_8)).lines()
+//          .collect(Collectors.joining("\n"));
+//      } catch (IOException e) {
+//        e.printStackTrace();
+//      } finally {
+//        if (urlConnection != null) {
+//          urlConnection.disconnect();
+//        }
+//      };
+//
+//      try {
+//        JSONObject urlItem = new JSONObject();
+//        JSONArray items = new JSONArray();
+//        if (htmlText != null) {
+//          urlItem.put("content", htmlText);
+//        }
+//
+//        urlItem.put("url", browserUrl);
+//        urlItem.put("uti", "public.url");
+//        items.put(urlItem);
+//
+//        _sendIntent.start((items));
+//      }
+//      catch (JSONException e){
+//        e.printStackTrace();
+//      }
+//
+////      return htmlText;
+//
+//    });
+
+
 
 
   }

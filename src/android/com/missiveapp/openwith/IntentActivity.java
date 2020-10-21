@@ -7,7 +7,9 @@ import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Bundle;
+import android.support.annotation.RequiresApi;
 import android.util.Log;
 import android.util.SparseArray;
 
@@ -19,6 +21,8 @@ import com.google.android.gms.vision.barcode.BarcodeDetector;
 
 import org.json.JSONException;
 import org.json.JSONObject;
+
+import static java.lang.System.*;
 
 public class IntentActivity extends Activity {
   private static String LOG_TAG = "Shared_IntentActivity";
@@ -119,12 +123,14 @@ public class IntentActivity extends Activity {
 //    return remoteInput == null;
 //  }
 
+  public interface StartActivityFun {
+    void start(JSONObject extraObj);
+  }
   /**
    * Forces the main activity to re-launch if it's unloaded.
    */
+  @RequiresApi(api = Build.VERSION_CODES.N)
   private void forceMainActivityReload(boolean startOnBackground) {
-    PackageManager pm = getPackageManager();
-    Intent launchIntent = pm.getLaunchIntentForPackage(getApplicationContext().getPackageName());
 
 //    Intent originalIntent = getIntent();
     Bundle extras = getIntent().getExtras();
@@ -134,42 +140,38 @@ public class IntentActivity extends Activity {
 //       ClipData data = getIntent().getClipData();
 //       launchIntent.setClipData(data);
 
-       String type = getIntent().getType();
+//       String type = getIntent().getType();
 //       if (type!=null) {
 //         launchIntent.putExtra("internalType", type);
 ////         launchIntent.setType(type);
 //       }
-      JSONObject obj = null;
+//      JSONObject obj = null;
+      StartActivityFun sendIntent = (JSONObject json)-> {
+        PackageManager pm = getPackageManager();
+        Intent launchIntent = pm.getLaunchIntentForPackage(getApplicationContext().getPackageName());
+
+        if (json!=null) {
+          launchIntent.putExtra("json", json.toString());
+      }
+
+      launchIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+
+//        launchIntent.addFlags(Intent.FLAG_FROM_BACKGROUND);
+
+      launchIntent.putExtra("cdvStartInBackground", false);
+        this.startActivity(launchIntent);
+      };
+
       try {
 //        obj = Serializer.toJSONObject(getApplicationContext().getContentResolver(), getIntent());
-        obj = Serializer.toJSONObject(this, getIntent());
+        Serializer.populateAndSendIntent(this, getIntent(), sendIntent);
+//        sendIntent.start(obj);
 
-        launchIntent.putExtra("json", obj.toString());
+//        launchIntent.putExtra("json", obj.toString());
       } catch (JSONException e) {
         e.printStackTrace();
       }
-//      if (obj!=null){
-//        launchIntent.putExtra("json", obj.toString());
-//      }
 
-//      Bundle originalExtras = extras.getBundle(PUSH_BUNDLE);
-////      if (originalExtras != null) {
-////        launchIntent.putExtras(originalExtras);
-////      }
-////      launchIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
-//      launchIntent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
-//
-//      launchIntent.addFlags(Intent.FLAG_FROM_BACKGROUND);
-//      launchIntent.putExtra("cdvStartInBackground", startOnBackground);
-////      launchIntent.putExtra(START_IN_BACKGROUND, startOnBackground);
-//    }
-//    launchIntent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
-      launchIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
-
-      launchIntent.addFlags(Intent.FLAG_FROM_BACKGROUND);
-      launchIntent.putExtra("cdvStartInBackground", false);
-
-      startActivity(launchIntent);
     }
   }
 

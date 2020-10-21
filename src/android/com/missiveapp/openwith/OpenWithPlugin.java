@@ -4,7 +4,9 @@ import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
+import android.support.annotation.RequiresApi;
 import android.util.Log;
 import android.util.SparseArray;
 
@@ -12,8 +14,20 @@ import com.google.android.gms.vision.Frame;
 import com.google.android.gms.vision.barcode.Barcode;
 import com.google.android.gms.vision.barcode.BarcodeDetector;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.ArrayList;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.stream.Collectors;
+
 import org.apache.cordova.CallbackContext;
 import org.apache.cordova.CordovaPlugin;
 import org.apache.cordova.PluginResult;
@@ -246,11 +260,16 @@ public class OpenWithPlugin extends CordovaPlugin {
     @Override
     public void onNewIntent(final Intent intent) {
         log(DEBUG, "onNewIntent() " + intent.getAction());
-        final JSONObject json = toJSONObject(intent);
+
+      IntentActivity.StartActivityFun startAction = (JSONObject json)->{
         if (json != null) {
             pendingIntents.add(json);
         }
         processPendingIntents();
+
+      };
+        populateInfoAndSend(intent, startAction);
+
     }
 
     /**
@@ -274,22 +293,98 @@ public class OpenWithPlugin extends CordovaPlugin {
         handlerContext.sendPluginResult(result);
     }
 
+
+    interface PopulateHtmlText {
+      void start(String content);
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.N)
+    private void _asyncPopulateHtmlContentAndSend(String _url, PopulateHtmlText _startHtmlText){
+    ExecutorService executor = Executors.newSingleThreadExecutor();
+
+    Future future = executor.submit(()->{
+      HttpURLConnection urlConnection = null;
+      String htmlText = null;
+      try {
+        URL url = new URL(_url);
+
+
+        urlConnection = (HttpURLConnection) url
+          .openConnection();
+
+        InputStream in = urlConnection.getInputStream();
+
+        htmlText = new BufferedReader(
+          new InputStreamReader(in, StandardCharsets.UTF_8)).lines()
+          .collect(Collectors.joining("\n"));
+      } catch (IOException e) {
+        e.printStackTrace();
+      } finally {
+        if (urlConnection != null) {
+          urlConnection.disconnect();
+        };
+        _startHtmlText.start(htmlText);
+      };
+
+
+    });
+
+
+    }
+    @RequiresApi(api = Build.VERSION_CODES.N)
+    private void populateHtmlContentAndSend(JSONObject urlItem, IntentActivity.StartActivityFun startActivityFun){
+      try {
+        if (urlItem.has("items")) {
+          JSONArray items = urlItem.getJSONArray("items");
+          if (items!=null){
+            JSONObject item = items.getJSONObject(0);
+            if (item.has("url")){
+              String url = item.getString("url");
+              PopulateHtmlText _startHtmlText = (String content)->{
+                if (content!=null){
+                  try {
+                    item.put("content", content);
+                  } catch (JSONException e) {
+                    e.printStackTrace();
+                  }
+                };
+                startActivityFun.start(urlItem);
+              };
+              this._asyncPopulateHtmlContentAndSend(url, _startHtmlText);
+              return;
+
+            }
+          }
+        };
+        startActivityFun.start(urlItem);
+      }
+      catch (JSONException e){
+        e.printStackTrace();
+      }
+
+
+    }
+
     /**
      * Converts an intent to JSON
      */
-    private JSONObject toJSONObject(final Intent intent) {
+    private void populateInfoAndSend(final Intent intent, IntentActivity.StartActivityFun startAction) {
       Bundle extras = intent.getExtras();
         try {
           if (extras.get("json") !=null){
-            return new JSONObject(extras.get("json").toString());
+             JSONObject urlItem = new JSONObject(extras.get("json").toString());
+            this.populateHtmlContentAndSend(urlItem, startAction);
+
+//            startAction.start(new JSONObject(extras.get("json").toString()));
+             return;
           };
 //            final ContentResolver contentResolver = this.cordova
 //                .getActivity().getApplicationContext().getContentResolver();
-            return Serializer.toJSONObject(this.cordova.getActivity(), intent);
+            Serializer.populateAndSendIntent(this.cordova.getActivity(), intent, startAction);
         } catch (JSONException e) {
             log(ERROR, "Error converting intent to JSON: " + e.getMessage());
             log(ERROR, Arrays.toString(e.getStackTrace()));
-            return null;
+//            return null;
         }
     }
 }
