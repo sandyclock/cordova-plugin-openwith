@@ -63,19 +63,19 @@ public class IntentActivity extends Activity {
 
 //    if (isPushPluginActive) {
       forceMainActivityReload(false);
-      if (intent.getAction().equals(Intent.ACTION_SEND)){
-        //this is an sending activity. We need to process this.
-//        ContentResolver resolver = this.getApplicationContext().getContentResolver();
-        try {
-          JSONObject obj = Serializer.toJSONObject(this, intent);
-//          Log.d(LOG_TAG, "obj:");
-//          Log.d(LOG_TAG, obj.toString());
-
-        } catch (JSONException e) {
-          e.printStackTrace();
-        }
-//        startActivity(intent);
-      }
+//      if (intent.getAction().equals(Intent.ACTION_SEND)){
+//        //this is an sending activity. We need to process this.
+////        ContentResolver resolver = this.getApplicationContext().getContentResolver();
+//        try {
+//          JSONObject obj = Serializer.toJSONObject(this, intent);
+////          Log.d(LOG_TAG, "obj:");
+////          Log.d(LOG_TAG, obj.toString());
+//
+//        } catch (JSONException e) {
+//          e.printStackTrace();
+//        }
+////        startActivity(intent);
+//      }
 
 
 //    };
@@ -126,7 +126,7 @@ public class IntentActivity extends Activity {
     PackageManager pm = getPackageManager();
     Intent launchIntent = pm.getLaunchIntentForPackage(getApplicationContext().getPackageName());
 
-    Intent originalIntent = getIntent();
+//    Intent originalIntent = getIntent();
     Bundle extras = getIntent().getExtras();
     if (extras != null) {
 
