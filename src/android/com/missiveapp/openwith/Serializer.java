@@ -7,6 +7,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -222,6 +223,8 @@ class Serializer {
       urlItem.put("imageType", "image/jpeg");
       items.put(urlItem);
 
+      decodeQRFromPreviewUri(urlItem, activity, screenshotUri);
+
       _sendIntent.start((items));
     }
     catch (JSONException e){
@@ -414,21 +417,113 @@ class Serializer {
     public static String getDataFromURI(
             final ContentResolver contentResolver,
             final Uri uri) {
-        try {
-            final InputStream inputStream = contentResolver.openInputStream(uri);
-            final byte[] bytes = ByteStreams.toByteArray(inputStream);
+      InputStream inputStream=null;// = contentResolver.openInputStream(uri);
 
+        try {
+            inputStream = contentResolver.openInputStream(uri);
+            final byte[] bytes = ByteStreams.toByteArray(inputStream);
+            inputStream.close();
             return Base64.encodeToString(bytes, Base64.DEFAULT);
         } catch (IOException e) {
             return "";
         }
     }
 
-  protected static void decodeQR(JSONObject json, final Activity activity, Uri imageUri){
+//  public static Bitmap getBitmapFromPreviewUri(ContentResolver contentResolver,  Uri uri) throws IOException{
+//
+//    BitmapFactory.Options bitmapOptions = new BitmapFactory.Options();
+//    final InputStream input = contentResolver.openInputStream(uri);
+//    Bitmap bitmap = BitmapFactory.decodeStream(input, null, bitmapOptions);
+//    input.close();
+//    return bitmap;
+//  }
+//
+//  public static Bitmap getBitmapFromMediaUri(ContentResolver contentResolver,  Uri uri) throws IOException{
+//    return MediaStore.Images.Media.getBitmap(contentResolver, uri);
+//
+//  }
+
+
+//    protected static void decodeQRForPreviewUri(JSONObject json, final Activity activity, Uri imageUri){
+//    Context context = activity.getApplicationContext();
+//    try {
+//      json.put("processed", true);
+//      final InputStream inputStream = activity.getContentResolver().openInputStream(imageUri);
+//
+//      Bitmap bitmap = MediaStore.Images.Media.getBitmap(activity.getContentResolver(), imageUri);
+//      BarcodeDetector detector =
+//        new BarcodeDetector.Builder(context)
+//          .setBarcodeFormats(Barcode.DATA_MATRIX | Barcode.QR_CODE)
+//          .build();
+//      if(!detector.isOperational()){
+//        Log.d("QR_READ","Could not set up the detector!");
+//      }
+//      Frame frame = new Frame.Builder().setBitmap(bitmap).build();
+//
+//      SparseArray<Barcode> barcodes = detector.detect(frame);
+//      Log.d("QR_READ","-barcodeLength-"+barcodes.size());
+//      Barcode thisCode=null;
+//      if (barcodes.size() ==0){
+//        return;
+//      }
+//      JSONArray barcodeArray = new JSONArray();
+//      for(int iter=0;iter<barcodes.size();iter++) {
+//        thisCode = barcodes.valueAt(iter);
+//        Log.d("QR_VALUE","--"+thisCode.rawValue);
+//        barcodeArray.put(thisCode.rawValue);
+//      };
+////      try {
+//      json.put("qrStrings", barcodeArray);
+////      } catch (JSONException e) {
+////        e.printStackTrace();
+////      }
+//
+//
+//      if(barcodes.size()==0){
+//        Log.d("QR_VALUE","--NODATA");
+//      }
+//      else if(barcodes.size()==1){
+//        thisCode = barcodes.valueAt(0);
+//        Log.d("QR_VALUE","--"+thisCode.rawValue);
+//      }
+//      else{
+//        for(int iter=0;iter<barcodes.size();iter++) {
+//          thisCode = barcodes.valueAt(iter);
+//          Log.d("QR_VALUE","--"+thisCode.rawValue);
+//        }
+//      }
+//
+//    } catch (IOException|JSONException e) {
+//      e.printStackTrace();
+//    }
+//
+//  }
+
+  interface BitmapResolver {
+      Bitmap start(ContentResolver resolver, Uri uri) throws IOException;
+  }
+  protected static void decodeQR(JSONObject json, final Activity activity, Uri imageUri) {
+      BitmapResolver bitmapResover = MediaStore.Images.Media::getBitmap;
+      _decodeQR(json, activity, imageUri, bitmapResover);
+  }
+
+  protected static void decodeQRFromPreviewUri(JSONObject json, final Activity activity, Uri previewUri){
+      BitmapResolver bitmapResolver = (ContentResolver contentResolver, Uri uri)-> {
+        BitmapFactory.Options bitmapOptions = new BitmapFactory.Options();
+        final InputStream input = contentResolver.openInputStream(uri);
+        Bitmap bitmap = BitmapFactory.decodeStream(input, null, bitmapOptions);
+        input.close();
+        return bitmap;
+      };
+      _decodeQR(json, activity, previewUri, bitmapResolver);
+
+  }
+
+    protected static void _decodeQR(JSONObject json, final Activity activity, Uri imageUri, BitmapResolver bitmapResolver){
     Context context = activity.getApplicationContext();
     try {
       json.put("processed", true);
-      Bitmap bitmap = MediaStore.Images.Media.getBitmap(activity.getContentResolver(), imageUri);
+      Bitmap bitmap =  bitmapResolver.start(activity.getContentResolver(), imageUri);
       BarcodeDetector detector =
         new BarcodeDetector.Builder(context)
           .setBarcodeFormats(Barcode.DATA_MATRIX | Barcode.QR_CODE)
@@ -475,6 +570,8 @@ class Serializer {
     }
 
   }
+
+
 
     /**
      * Convert the Uri to the direct file system path of the image file.
