@@ -216,7 +216,10 @@ class Serializer {
 //      }
 
       urlItem.put("url", browserUrl);
+      urlItem.put("title", subject);
       urlItem.put("uti", "public.url");
+      urlItem.put("base64", dataFromURI);
+      urlItem.put("imageType", "image/jpeg");
       items.put(urlItem);
 
       _sendIntent.start((items));

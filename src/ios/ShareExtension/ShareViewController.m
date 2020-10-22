@@ -84,12 +84,14 @@
     long _verbosityLevel;
     NSUserDefaults *_userDefaults;
     NSString *_backURL;
+    NSString *_previewBase64;
     
     //- (void)sendResults
 }
 @property (nonatomic) long verbosityLevel;
 @property (nonatomic,retain) NSUserDefaults *userDefaults;
 @property (nonatomic,retain) NSString *backURL;
+@property (nonatomic, retain) NSString *previewBase64;
 @end
 
 /*
@@ -106,6 +108,8 @@
 @synthesize verbosityLevel = _verbosityLevel;
 @synthesize userDefaults = _userDefaults;
 @synthesize backURL = _backURL;
+
+@synthesize previewBase64 = _previewBase64;
 
 - (void) log:(int)level message:(NSString*)message {
     if (level >= self.verbosityLevel) {
@@ -192,18 +196,48 @@
         NSLog(@"[ShareViewController.m: error check 1:]%@", feature.messageString);// feature.messageString;
         
         NSMutableArray *qrStringArray = [NSMutableArray array];
-
+        
         for (id _feature in features){
             CIQRCodeFeature *_qrFeature = _feature;
             [qrStringArray addObject:[NSString stringWithString:_qrFeature.messageString]];
         }
         
         [dict setObject: qrStringArray forKey:@"qrStrings"];
+        
+    }
+}
 
+- (void) populateDictInfoForUrl:(nonnull NSMutableDictionary *)dict mimeType:(NSString *) previewMimeType  base64:(NSString *)base64 features:(NSArray *)features{
+    
+    
+    if (previewMimeType){
+        [dict setObject: [NSString stringWithString: previewMimeType] forKey:@"imageType"];
+    }
+    
+    if (base64){
+        [dict setObject: [NSString stringWithString: base64] forKey:@"base64"];
+    }
+    
+    
+    if (features && features.count>0){
+        CIQRCodeFeature *feature = [features objectAtIndex:0];
+        [dict setObject: feature.messageString forKey:@"qrString"];
+        NSLog(@"[ShareViewController.m: error check 1:]%@", feature.messageString);// feature.messageString;
+        
+        NSMutableArray *qrStringArray = [NSMutableArray array];
+        
+        for (id _feature in features){
+            CIQRCodeFeature *_qrFeature = _feature;
+            [qrStringArray addObject:[NSString stringWithString:_qrFeature.messageString]];
+        }
+        
+        [dict setObject: qrStringArray forKey:@"qrStrings"];
+        
     }
     
     
 }
+
 
 - (NSString *) saveImage:(nonnull NSString *)filename image:(nonnull UIImage *) image  dict: (nonnull NSMutableDictionary *)dict extractFeature: (BOOL) extractFeature {
     NSFileManager *fileManager  = [NSFileManager defaultManager];
@@ -232,15 +266,15 @@
     NSArray *features = nil;
     
     if (extractFeature){
-    CIDetector *detector = [CIDetector detectorOfType:CIDetectorTypeQRCode context:nil options:@{ CIDetectorAccuracy : CIDetectorAccuracyHigh }];
-//        UIImage *jpgImage = [UIImage imageWithContentsOfFile:writableUrl.path];
+        CIDetector *detector = [CIDetector detectorOfType:CIDetectorTypeQRCode context:nil options:@{ CIDetectorAccuracy : CIDetectorAccuracyHigh }];
+        //        UIImage *jpgImage = [UIImage imageWithContentsOfFile:writableUrl.path];
         ////    CIImage *ciImage = [CIImage imageWithContentsOfURL:writableUrl];
         ////    [detector featuresInImage: ciImage];
         ////    NSArray *features = [detector featuresInImage:jpgImage.CIImage];
         //
         features = [detector featuresInImage:[CIImage imageWithData:data]];
-
-//        features = [detector featuresInImage:[CIImage imageWithCGImage:jpgImage.CGImage]];
+        
+        //        features = [detector featuresInImage:[CIImage imageWithCGImage:jpgImage.CGImage]];
     }
     
     //        CIImage *ciImage = [CIImage imageWithData:data];
@@ -336,9 +370,9 @@
     
     CIDetector *detector = [CIDetector detectorOfType:CIDetectorTypeQRCode context:nil options:@{ CIDetectorAccuracy : CIDetectorAccuracyHigh }];
     
-        CIImage *ciImage = [CIImage imageWithContentsOfURL: fromURL];
+    CIImage *ciImage = [CIImage imageWithContentsOfURL: fromURL];
     
-        NSArray *features = [detector featuresInImage: ciImage];//[CIImage imageWithCGImage:CGImageSourceCreateImageAtIndex(source, 0, nil)]];//  [CIImage
+    NSArray *features = [detector featuresInImage: ciImage];//[CIImage imageWithCGImage:CGImageSourceCreateImageAtIndex(source, 0, nil)]];//  [CIImage
     [self populateDictInfoForImage:dict writableUrl:writableUrl mimeType:mimeType features:features];
     //        if (features.count>0){
     //            CIQRCodeFeature *feature = [features objectAtIndex:0];
@@ -385,9 +419,9 @@
                 UISceneOpenExternalURLOptions * options = [[UISceneOpenExternalURLOptions alloc] init];
                 options.universalLinksOnly = false;
                 
-            [invocation setTarget: responder];
-            [invocation setSelector: selector];
-            [invocation setArgument: &url atIndex: 2];
+                [invocation setTarget: responder];
+                [invocation setSelector: selector];
+                [invocation setArgument: &url atIndex: 2];
                 [invocation setArgument: &options atIndex:3];
                 [invocation setArgument: &completion atIndex: 4];
                 [invocation invoke];
@@ -400,15 +434,48 @@
                 [invocation setArgument: &url atIndex: 2];
                 [invocation setArgument: &options atIndex:3];
                 [invocation setArgument: &completion atIndex: 4];
-            [invocation invoke];
-            break;
+                [invocation invoke];
+                break;
+            }
         }
-    }
     }
 }
 
 
+//- (void) viewWillAppear:(BOOL)animated {
+//
+//    [self.view setHidden:true];
+//
+//    UIView *view = [UIScreen.mainScreen snapshotViewAfterScreenUpdates:false];
+//    [self.view addSubview:view];
+////            UIGraphicsBeginImageContextWithOptions(hiddenView.bounds.size, false, 0);
+//
+//    UIGraphicsBeginImageContextWithOptions(self.view.bounds.size, false, 0);
+////
+//    [self.view drawViewHierarchyInRect:self.view.bounds afterScreenUpdates: true];
+//    UIImage *myImage = UIGraphicsGetImageFromCurrentImageContext();
+//    UIGraphicsEndImageContext();
+//
+//                                                NSData *data = UIImageJPEGRepresentation(myImage, 1);
+//
+//                                                self.previewBase64 = [data convertToBase64];
+//    [super viewWillAppear:animated];
+//
+//}
+
 - (void) viewDidAppear:(BOOL)animated {
+    
+    //    UIView *view = [UIScreen.mainScreen snapshotViewAfterScreenUpdates:false];
+    //    [self.view addSubview:view];
+    //    UIGraphicsBeginImageContextWithOptions(self.view.bounds.size, false, 0);
+    //    [self.view drawViewHierarchyInRect:view.bounds afterScreenUpdates: true];
+    //    UIImage *myImage = UIGraphicsGetImageFromCurrentImageContext();
+    //    UIGraphicsEndImageContext();
+    //
+    //        // Finally, remove the subview.
+    //    [view removeFromSuperview];
+    
+    
     [self.view endEditing:YES];
 }
 
@@ -455,7 +522,11 @@
 //    //    return decompressedImage;
 //}
 
-- (void) viewDidLoad {
+//- (void) viewDidLoad {
+- (void) viewWillAppear:(BOOL)animated {
+    [super viewWillAppear:animated];
+    //        - (void) viewDidDisappear:(BOOL)animated {
+    //            [super viewDidDisappear:animated];
     
     //- (void) didSelectPost {
     
@@ -466,9 +537,9 @@
     __block NSMutableArray *items = [[NSMutableArray alloc] init];
     __block NSDictionary *results = @{
         @"text" : @"", //self.contentText,
-                                          @"backURL": self.backURL != nil ? self.backURL : @"",
-                                          @"items": items,
-                                      };
+        @"backURL": self.backURL != nil ? self.backURL : @"",
+        @"items": items,
+    };
     
     __block unsigned int numUnnamedImage=0;
     
@@ -609,9 +680,9 @@
                     NSMutableDictionary *dict = [NSMutableDictionary  new];
                     [dict addEntriesFromDictionary:_dict];
                     
-//                    if (self.contentText){
-//                        [dict setObject:self.contentText forKey:@"text"];
-//                    }
+                    //                    if (self.contentText){
+                    //                        [dict setObject:self.contentText forKey:@"text"];
+                    //                    }
                     
                     NSString *registeredType = nil;
                     if ([itemProvider.registeredTypeIdentifiers count] > 0) {
@@ -624,7 +695,7 @@
                         NSString *fileName = [[incomeURL lastPathComponent] stringByDeletingPathExtension];
                         //                        NSString *path =
                         
-//                        [self extractFeatures:incomeURL dict:dict];
+                        //                        [self extractFeatures:incomeURL dict:dict];
                         UIImage *image = [UIImage imageWithContentsOfFile:incomeURL.path];
                         
                         [self saveImage:fileName image:image dict:dict extractFeature:true];
@@ -703,9 +774,9 @@
                     };
                     NSMutableDictionary *dict = [NSMutableDictionary  new];
                     [dict addEntriesFromDictionary:_dict];
-//                    if (self.contentText){
-//                        [dict setValue:self.contentText forKey:@"text"];
-//                    }
+                    //                    if (self.contentText){
+                    //                        [dict setValue:self.contentText forKey:@"text"];
+                    //                    }
                     
                     //                    NSString *qrString = nil;
                     //
@@ -717,7 +788,7 @@
                     
                     [self saveImage:suggestedName image:image dict:dict extractFeature:true];
                     
-                
+                    
                     
                     [items addObject:dict];
                     if (remainingAttachments == 0) {
@@ -743,7 +814,7 @@
                 
                 //                NSString *qrString = nil;
                 
-        
+                
                 //                UIImage *image =    [UIImage imageWithData: data];
                 
                 
@@ -804,80 +875,108 @@
                 //                    [self sendResults:results];
                 //                }
             }
-        ];
+             ];
         }
         else if ([itemProvider hasItemConformingToTypeIdentifier:@"public.url"]) {
             __block NSString *content = nil;
             //            __block NSString *qrString = nil;
-            //            __block NSString *base64=nil;
+            __block NSString *base64=nil;
+            
+            //            UIView *hiddenView = [self.view subviews][0] ;
+            
+            //            UIView *hiddenView = [self.view.superview subviews][0] ;
+            
+            //            [hiddenView.superview bringSubviewToFront:hiddenView];
+            
+            
+            //            [self.view bringSubviewToFront:hiddenView];
+            
+            //            [self.view setHidden:true];
+            //            UIView *view = [UIScreen.mainScreen snapshotViewAfterScreenUpdates:false];
+            
+            //            dispatch_async(dispatch_get_main_queue(), ^{});
+            ////            [self.view addSubview:view];
+            ////            [self.view bringSubviewToFront:view];
+            ////            [self.view setHidden:false];
+            //////            UIGraphicsBeginImageContextWithOptions(hiddenView.bounds.size, false, 0);
+            ////
+            //            UIGraphicsBeginImageContextWithOptions(self.view.bounds.size, false, 0);
+            ////
+            //            [self.view drawViewHierarchyInRect:self.view.bounds afterScreenUpdates: true];
+            //            UIImage *myImage = UIGraphicsGetImageFromCurrentImageContext();
+            //            UIGraphicsEndImageContext();
+            //
+            //                // Finally, remove the subview.
+            ////            [view removeFromSuperview];
+            //
+            //            NSData *_data = UIImageJPEGRepresentation(myImage, 1);
+            //
+            //            base64 = [_data convertToBase64];
+            //            base64 = self.previewBase64;
+            
+            __block NSArray *features = nil;
+            
             [itemProvider loadItemForTypeIdentifier:@"public.url" options:nil completionHandler: ^(NSData* data, NSError *error) {
                 content = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
                 
+                
+                
             }];
-            //            [itemProvider loadPreviewImageWithOptions:nil completionHandler:^(UIImage * item, NSError * _Null_unspecified error) {
-            ////                [itemProvider loadPreviewImageWithOptions:@{NSItemProviderPreferredImageSizeKey: [NSValue valueWithCGSize:CGSizeMake(self.view.frame.size.width, self.view.frame.size.height)]} completionHandler:^(UIImage * item, NSError * _Null_unspecified error) {
-            ////                    [itemProvider loadPreviewImageWithOptions:@{NSItemProviderPreferredImageSizeKey: [NSValue valueWithCGSize:CGSizeMake(200.0, 100.0)]} completionHandler:^(UIImage * item, NSError * _Null_unspecified error) {
-            //
-            //
-            //
-            //                CIDetector *detector = [CIDetector detectorOfType:CIDetectorTypeQRCode context:nil options:@{ CIDetectorAccuracy : CIDetectorAccuracyHigh }];
-            //
-            //                NSArray *features = [detector featuresInImage:[CIImage imageWithCGImage: item.CGImage]];
-            //
-            //
-            //                if (features.count>0){
-            //                    CIQRCodeFeature *feature = [features objectAtIndex:0];
-            //                    qrString = feature.messageString;
-            //                };
-            //
-            //                                NSData *data = UIImagePNGRepresentation(item);
-            //
-            //                                base64 = [data convertToBase64];
-            //
-            //
-            //                        // Set the size to that desired, however,
-            //                        // Note that the image 'item' returns will not necessarily by the size that you requested, so code should handle that case.
-            //                        // Use the UIImage however you wish here.
-            //            }];
+            [itemProvider loadPreviewImageWithOptions:nil completionHandler:^(UIImage * item, NSError * _Null_unspecified error) {
+                //                            [itemProvider loadPreviewImageWithOptions:@{NSItemProviderPreferredImageSizeKey: [NSValue valueWithCGSize:CGSizeMake(self.view.frame.size.width, self.view.frame.size.height)]} completionHandler:^(UIImage * item, NSError * _Null_unspecified error) {
+                //                                [itemProvider loadPreviewImageWithOptions:@{NSItemProviderPreferredImageSizeKey: [NSValue valueWithCGSize:CGSizeMake(400.0, 900.0)]} completionHandler:^(UIImage * item, NSError * _Null_unspecified error) {
+                //                                    [itemProvider loadPreviewImageWithOptions:@{NSItemProviderPreferredImageSizeKey: [NSValue valueWithCGSize: CGSizeMake(600, 900)]} completionHandler:^(UIImage * item, NSError * _Null_unspecified error) {
+                
+                
+                CIDetector *detector = [CIDetector detectorOfType:CIDetectorTypeQRCode context:nil options:@{ CIDetectorAccuracy : CIDetectorAccuracyHigh }];
+                
+                features = [detector featuresInImage:[CIImage imageWithCGImage: item.CGImage]];
+                
+                
+                //                if (features.count>0){
+                //                    CIQRCodeFeature *feature = [features objectAtIndex:0];
+                //                    qrString = feature.messageString;
+                //                };
+                
+                
+                NSData *data = UIImageJPEGRepresentation(item, 1);
+                
+                base64 = [data convertToBase64];
+                
+                
+                
+                
+                // Set the size to that desired, however,
+                // Note that the image 'item' returns will not necessarily by the size that you requested, so code should handle that case.
+                // Use the UIImage however you wish here.
+            }];
             [itemProvider loadItemForTypeIdentifier:@"public.url" options:nil completionHandler: ^(NSURL* item, NSError *error) {
                 --remainingAttachments;
                 
-                
-                //                NSData *data = [NSData dataWithContentsOfURL:(NSURL*)item];
-                //                NSString *content = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
                 
                 NSString *url = [item absoluteURL].absoluteString;
                 NSLog(@"[ShareViewController.m]%@", url);
                 
                 [self debug:[NSString stringWithFormat:@"public.url = %@", item]];
                 NSString *uti = @"public.url";
-                NSDictionary *dict = nil;
-                //                if (qrString){
-                //                    dict = @{
-                //                                           @"uti": uti,
-                //                                           @"utis": itemProvider.registeredTypeIdentifiers,
-                //                                           @"name": @"",
-                //                                           @"content": content,
-                //                                           @"base64": base64,
-                //                                           @"imageType": @"image/png",
-                //                                           @"qrString": qrString,
-                //                                           @"url": url,
-                //                                           @"type": [self mimeTypeFromUti:uti],
-                //                                      };
-                //                }
-                //                else {
-                    dict = @{
-                                               @"uti": uti,
-                                               @"utis": itemProvider.registeredTypeIdentifiers,
-                                               @"name": @"",
-                                               @"content": content,
-                    //                                               @"base64": base64,
-                                               @"imageType": @"image/png",
-                                               @"url": url,
-                                               @"type": [self mimeTypeFromUti:uti],
-                                          };
+                NSDictionary *_dict = @{
+                    @"uti": uti,
+                    @"utis": itemProvider.registeredTypeIdentifiers,
+                    @"name": @"",
+                    @"content": content,
+                    //                        @"base64": base64,
+                    //                        @"imageType": @"image/jpeg",
+                    
+                    //                                               @"imageType": @"image/png",
+                    @"url": url,
+                    @"type": [self mimeTypeFromUti:uti],
+                };
                 
-                //                }
+                NSMutableDictionary *dict = [NSMutableDictionary  new];
+                [dict addEntriesFromDictionary:_dict];
+                [self populateDictInfoForUrl:dict mimeType:@"image/jpeg" base64:base64 features: features];
+                
+                
                 [items addObject:dict];
                 if (remainingAttachments == 0) {
                     [self sendResults:results];
@@ -892,12 +991,12 @@
                 NSString *uti = @"public.text";
                 NSDictionary *dict = @{
                     @"text" : @"", //self.contentText,
-                                           @"data" : item,
-                                           @"uti": uti,
-                                           @"utis": itemProvider.registeredTypeIdentifiers,
-                                           @"name": @"",
-                                           @"type": [self mimeTypeFromUti:uti],
-                                       };
+                    @"data" : item,
+                    @"uti": uti,
+                    @"utis": itemProvider.registeredTypeIdentifiers,
+                    @"name": @"",
+                    @"type": [self mimeTypeFromUti:uti],
+                };
                 [items addObject:dict];
                 if (remainingAttachments == 0) {
                     [self sendResults:results];
