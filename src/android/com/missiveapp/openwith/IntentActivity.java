@@ -33,8 +33,9 @@ public class IntentActivity extends Activity {
    * If needed, we boot up the main activity to kickstart the application.
    * @see android.app.Activity#onCreate(android.os.Bundle)
    */
+  @RequiresApi(api = Build.VERSION_CODES.N)
   @Override
-  public void onCreate(Bundle savedInstanceState)  {
+  public void onCreate(Bundle savedInstanceState) {
 
     Intent intent = getIntent();
 
@@ -66,7 +67,7 @@ public class IntentActivity extends Activity {
 
 
 //    if (isPushPluginActive) {
-      forceMainActivityReload(false);
+    forceMainActivityReload(false);
 //      if (intent.getAction().equals(Intent.ACTION_SEND)){
 //        //this is an sending activity. We need to process this.
 ////        ContentResolver resolver = this.getApplicationContext().getContentResolver();
@@ -126,6 +127,7 @@ public class IntentActivity extends Activity {
   public interface StartActivityFun {
     void start(JSONObject extraObj);
   }
+
   /**
    * Forces the main activity to re-launch if it's unloaded.
    */
@@ -146,19 +148,19 @@ public class IntentActivity extends Activity {
 ////         launchIntent.setType(type);
 //       }
 //      JSONObject obj = null;
-      StartActivityFun sendIntent = (JSONObject json)-> {
+      StartActivityFun sendIntent = (JSONObject json) -> {
         PackageManager pm = getPackageManager();
         Intent launchIntent = pm.getLaunchIntentForPackage(getApplicationContext().getPackageName());
 
-        if (json!=null) {
+        if (json != null) {
           launchIntent.putExtra("json", json.toString());
-      }
+        }
 
-      launchIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        launchIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
 
 //        launchIntent.addFlags(Intent.FLAG_FROM_BACKGROUND);
 
-      launchIntent.putExtra("cdvStartInBackground", false);
+        launchIntent.putExtra("cdvStartInBackground", false);
         this.startActivity(launchIntent);
       };
 
