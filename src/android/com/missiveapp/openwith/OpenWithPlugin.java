@@ -398,7 +398,7 @@ public class OpenWithPlugin extends CordovaPlugin {
   private void populateInfoAndSend(final Intent intent, IntentActivity.StartActivityFun startAction) {
     Bundle extras = intent.getExtras();
     try {
-      if (extras.get("json") != null) {
+      if (extras!=null && extras.get("json") != null) {
         JSONObject urlItem = new JSONObject(extras.get("json").toString());
         this.populateHtmlContentAndSend(urlItem, startAction);
 
